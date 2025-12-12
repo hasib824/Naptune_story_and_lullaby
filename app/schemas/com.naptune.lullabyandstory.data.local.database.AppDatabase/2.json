@@ -1,0 +1,288 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "9f794c6e24e92a0fae484d92c9eb49d1",
+    "entities": [
+      {
+        "tableName": "lullaby_table",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`document_id` TEXT NOT NULL, `id` TEXT NOT NULL, `music_name` TEXT NOT NULL, `music_path` TEXT NOT NULL, `music_local_path` TEXT, `music_size` TEXT NOT NULL, `image_path` TEXT NOT NULL, `music_length` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `is_downloaded` INTEGER NOT NULL, `is_favourite` INTEGER NOT NULL, `popularity_count` INTEGER NOT NULL, `is_free` INTEGER NOT NULL, PRIMARY KEY(`document_id`))",
+        "fields": [
+          {
+            "fieldPath": "documentId",
+            "columnName": "document_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicName",
+            "columnName": "music_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicPath",
+            "columnName": "music_path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicLocalPath",
+            "columnName": "music_local_path",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "musicSize",
+            "columnName": "music_size",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imagePath",
+            "columnName": "image_path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicLength",
+            "columnName": "music_length",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDownloaded",
+            "columnName": "is_downloaded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFavourite",
+            "columnName": "is_favourite",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "popularity_count",
+            "columnName": "popularity_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFree",
+            "columnName": "is_free",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "document_id"
+          ]
+        }
+      },
+      {
+        "tableName": "story_table",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`document_id` TEXT NOT NULL, `id` TEXT NOT NULL, `story_name` TEXT NOT NULL, `story_description` TEXT NOT NULL, `story_audio_path` TEXT NOT NULL, `image_path` TEXT NOT NULL, `story_length` TEXT NOT NULL, `story_listen_time_in_millis` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `is_favourite` INTEGER NOT NULL, `popularity_count` INTEGER NOT NULL, `is_free` INTEGER NOT NULL, PRIMARY KEY(`document_id`))",
+        "fields": [
+          {
+            "fieldPath": "documentId",
+            "columnName": "document_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storyName",
+            "columnName": "story_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storyDescription",
+            "columnName": "story_description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storyAudioPath",
+            "columnName": "story_audio_path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imagePath",
+            "columnName": "image_path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "story_reading_time",
+            "columnName": "story_length",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "story_listen_time_in_millis",
+            "columnName": "story_listen_time_in_millis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFavourite",
+            "columnName": "is_favourite",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "popularity_count",
+            "columnName": "popularity_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFree",
+            "columnName": "is_free",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "document_id"
+          ]
+        }
+      },
+      {
+        "tableName": "translation_table",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`translation_id` TEXT NOT NULL, `lullaby_document_id` TEXT NOT NULL, `lullaby_id` TEXT NOT NULL, `music_name_en` TEXT NOT NULL, `music_name_es` TEXT NOT NULL, `music_name_fr` TEXT NOT NULL, `music_name_de` TEXT NOT NULL, `music_name_pt` TEXT NOT NULL, `music_name_hi` TEXT NOT NULL, `music_name_ar` TEXT NOT NULL, `created_at` INTEGER NOT NULL, PRIMARY KEY(`translation_id`), FOREIGN KEY(`lullaby_document_id`) REFERENCES `lullaby_table`(`document_id`) ON UPDATE CASCADE ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "translationId",
+            "columnName": "translation_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lullabyDocumentId",
+            "columnName": "lullaby_document_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lullabyId",
+            "columnName": "lullaby_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicNameEn",
+            "columnName": "music_name_en",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicNameEs",
+            "columnName": "music_name_es",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicNameFr",
+            "columnName": "music_name_fr",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicNameDe",
+            "columnName": "music_name_de",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicNamePt",
+            "columnName": "music_name_pt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicNameHi",
+            "columnName": "music_name_hi",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "musicNameAr",
+            "columnName": "music_name_ar",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "translation_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_translation_table_lullaby_document_id",
+            "unique": false,
+            "columnNames": [
+              "lullaby_document_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_translation_table_lullaby_document_id` ON `${TABLE_NAME}` (`lullaby_document_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "lullaby_table",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE",
+            "columns": [
+              "lullaby_document_id"
+            ],
+            "referencedColumns": [
+              "document_id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9f794c6e24e92a0fae484d92c9eb49d1')"
+    ]
+  }
+}

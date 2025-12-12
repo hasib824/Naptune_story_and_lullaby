@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ✅ FIXED: Using MaterialComponents theme (required by AppCompatActivity)
+         Material Components library provides AppCompat-compatible themes
+         All visual theming is still handled by Compose's MaterialTheme -->
+    <style name="Theme.Naptune" parent="Theme.MaterialComponents.Light.NoActionBar">
+       <!-- <item name="android:windowFullscreen">false</item>-->
+       <!-- Smooth activity recreation transition -->
+       <item name="android:windowAnimationStyle">@style/WindowAnimationTransition</item>
+       <!-- Use app background color to match UI -->
+       <item name="android:windowBackground">@color/background_color</item>
+       <!-- Reduce blink with no title delay -->
+       <item name="android:windowContentOverlay">@null</item>
+       <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <!-- Animation style for smooth language switching -->
+    <style name="WindowAnimationTransition">
+        <item name="android:windowEnterAnimation">@anim/quick_fade_in</item>
+        <item name="android:windowExitAnimation">@anim/quick_fade_out</item>
+    </style>
+    
+    <!-- Splash Screen Theme -->
+    <style name="Theme.Naptune.SplashScreen" parent="Theme.Naptune">
+        <item name="android:windowBackground">@drawable/splash_screen_vector</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+       <!-- <item name="android:windowFullscreen">true</item>-->
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowIsTranslucent">false</item>
+    </style>
+
+    
+</resources>

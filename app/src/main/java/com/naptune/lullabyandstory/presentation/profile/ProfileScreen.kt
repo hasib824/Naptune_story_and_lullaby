@@ -1,0 +1,455 @@
+package com.naptune.lullabyandstory.presentation.profile
+
+import androidx.compose.animation.core.*
+import androidx.compose.runtime.State
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.naptune.lullabyandstory.R
+import com.naptune.lullabyandstory.presentation.components.common.responsive.ResponsiveStylesOfProfileScreen
+import com.naptune.lullabyandstory.presentation.components.common.responsive.getProfileScreenResponsiveStyles
+import com.naptune.lullabyandstory.presentation.components.common.responsive.rememberScreenDimensionManager
+import com.naptune.lullabyandstory.presentation.components.language.LanguageSelectionBottomSheet
+import com.naptune.lullabyandstory.presentation.components.profile.ProfileLanguageItem
+import com.naptune.lullabyandstory.presentation.language.LanguageViewModel
+import com.naptune.lullabyandstory.presentation.player.service.MusicController
+import com.naptune.lullabyandstory.presentation.navigation.MusicControllerAccessViewModel
+import com.naptune.lullabyandstory.presentation.components.admob.SmoothBannerAdSection
+import com.naptune.lullabyandstory.data.network.admob.AdMobDataSource
+import com.naptune.lullabyandstory.domain.model.AdSizeType
+import com.naptune.lullabyandstory.utils.InternetConnectionManager
+
+@Composable
+private fun ShimmerBox(
+    isShimmering: Boolean,
+    translateAnimation: State<Float>, // ✅ PERFORMANCE FIX: Accept shared transition instead of creating new one
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    // ✅ Updated to match MainScreen shimmer colors (dark theme matching)
+    val shimmerColors = listOf(
+        Color(0xFF2A3648), // Base color (same as MainScreen)
+        Color(0xFF3D4A5E), // Highlight color (same as MainScreen)
+        Color(0xFF2A3648)  // Base color for smooth loop
+    )
+
+    Box(modifier = modifier) {
+        if (isShimmering) {
+            // ✅ Shimmer box with exact padding matching ProfileItem (8.dp horizontal, 18.dp vertical)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp, vertical = 8.dp) // ✅ Match ProfileItem padding*/
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = shimmerColors,
+                            // ✅ Horizontal direction only (same as MainScreen)
+                            start = Offset(x = translateAnimation.value - 200f, y = 0f),
+                            end = Offset(x = translateAnimation.value, y = 0f)
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+            )
+        } else {
+            content()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileScreen(
+    contentBottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
+    viewModel: ProfileViewModel = hiltViewModel(),
+    languageViewModel: LanguageViewModel = hiltViewModel(),
+    musicController: MusicController = hiltViewModel<MusicControllerAccessViewModel>().musicController,
+    globalAudioPlayerManager: com.naptune.lullabyandstory.presentation.player.bottomsheet.GlobalAudioPlayerManager? = null,
+    onLanguageChanged: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}, // ✅ NEW: Navigation to Settings
+    onNavigateToFavourite: () -> Unit = {} // ✅ NEW: Navigation to Favourite
+) {
+    // Get UI state and context
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    // ✅ MVI FIX: Use uiState.isPremiumUser instead of separate isPurchased StateFlow
+
+    // ✅ NEW: Network state for banner ad
+    val isNetworkAvailable by viewModel.internetConnectionManager.isNetworkAvailable.collectAsStateWithLifecycle()
+
+    // Language selection state
+    var showLanguageBottomSheet by remember { mutableStateOf(false) }
+    var isLanguageChanging by remember { mutableStateOf(false) }
+    // ✅ MVI FIX: Get currentLanguage from uiState (single source of truth)
+    val currentLanguage = uiState.currentLanguage
+
+    // Language ViewModel state
+    val languageViewModelCurrentLanguage by languageViewModel.currentLanguage.collectAsState()
+    val showLanguageConfirmDialog by languageViewModel.showLanguageConfirmDialog.collectAsState()
+
+    // ✅ ARCHITECTURE FIX: Ad initialization moved to ViewModel init block
+    // Ads are only initialized for free users in ProfileViewModel
+
+    val rememberScreenDimensionManager = rememberScreenDimensionManager()
+    val responsiveStyles =
+        getProfileScreenResponsiveStyles(rememberScreenDimensionManager)
+
+    // Handle success and error messages
+    LaunchedEffect(uiState.successMessage) {
+        uiState.successMessage?.let { message ->
+            // Auto clear message after showing (optional)
+            kotlinx.coroutines.delay(2000)
+            viewModel.handleIntent(ProfileIntent.ClearMessage)
+        }
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            // Auto clear error after showing (optional)
+            kotlinx.coroutines.delay(3000)
+            viewModel.handleIntent(ProfileIntent.ClearMessage)
+        }
+    }
+
+    // ✅ PERFORMANCE FIX: Create single shared transition for all shimmer effects (instead of 6+ individual transitions)
+    val shimmerTransition = rememberInfiniteTransition(label = "profile_shimmer")
+    val shimmerTranslateAnimation = shimmerTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer_translate"
+    )
+
+    // Create list of profile actions
+    val profileActions = listOf(
+        // ✅ NEW: My Favourite as the second item (first in this list, after Language)
+        ProfileAction(stringResource(R.string.nav_favourite), R.drawable.favouritenavic) {
+            onNavigateToFavourite() // ✅ Navigate to Favourite screen
+        },
+
+        ProfileAction(stringResource(R.string.profile_settings_title), R.drawable.ic_settings_profile) {
+            onNavigateToSettings() // ✅ Navigate to Settings screen
+        },
+
+        ProfileAction(stringResource(R.string.profile_share_app), R.drawable.ic_share_profile) {
+            viewModel.handleIntent(ProfileIntent.ShareApp, context)
+        },
+    /*    ProfileAction(stringResource(R.string.profile_feedback)) {
+            viewModel.handleIntent(ProfileIntent.SendFeedback, context)
+        },*/
+        ProfileAction(stringResource(R.string.profile_rating), R.drawable.ic_rating_profile) {
+            viewModel.handleIntent(ProfileIntent.RateApp, context)
+        },
+       /* ProfileAction(stringResource(R.string.profile_privacy_policy)) { },
+        ProfileAction(stringResource(R.string.profile_acknowledgement)) { },
+        ProfileAction(stringResource(R.string.profile_restore_purchase)) { }*/
+    )
+
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent)
+            .padding(start = (0).dp, end = (0).dp, top = 0.dp,bottom = 16.dp)
+           // .padding(start = responsiveStyles.profileitemHorizontalPadding, end = responsiveStyles.profileitemHorizontalPadding, top = responsiveStyles.pageTitleBottomMargin)
+    ) {
+
+        // Profile picture section
+       /* Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ShimmerBox(
+                isShimmering = isLanguageChanging,
+                modifier = Modifier.size(responsiveStyles.imageSize)
+            ) {
+                Box(
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    AsyncImage(
+                        model = "https://images.pexels.com/photos/1287145/pexels-photo-1287145.jpeg",
+                        contentDescription = stringResource(R.string.content_desc_profile_image),
+                        modifier = Modifier
+                            .size(responsiveStyles.imageSize)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Premium crown icon
+                    if (uiState.isPremiumUser) {
+                        Text(
+                            text = "\uD83D\uDC51",
+                            style = MaterialTheme.typography.titleMedium.copy(fontSize = responsiveStyles.userNameFontSize),
+                            modifier = Modifier.offset(y = (-8).dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(responsiveStyles.firstItemTopMargin))
+
+            ShimmerBox(
+                isShimmering = isLanguageChanging,
+                modifier = Modifier.fillMaxWidth(0.6f).height(24.dp)
+            ) {
+                Text(
+                    text = uiState.userName,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = responsiveStyles.userNameFontSize),
+                    textAlign = TextAlign.Left,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+*//*
+            // Premium unlock option
+            if (!uiState.isPremiumUser) {
+                Spacer(modifier = Modifier.height(16.dp))
+                ShimmerBox(
+                    isShimmering = isLanguageChanging,
+                    modifier = Modifier.fillMaxWidth(0.7f).wrapContentHeight()
+                ) {
+                    Text(
+                        text = stringResource(R.string.profile_unlock_premium),
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = responsiveStyles.unlockPremiumFontSize),
+                        textAlign = TextAlign.Left,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+*//*
+
+          //  Spacer(modifier = Modifier.height(responsiveStyles.horizontalDevidertopMargin))
+
+        }*/
+
+        val bottomSheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true
+        )
+
+        // Profile action items in LazyColumn
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 12.dp, top = 22.dp, bottom = contentBottomPadding) // ✅ Pre-computed (20-8, 40-18)
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp) // ✅ No spacing - items are flush
+        ) {
+            // 🌍 FIRST ITEM: Language Selection
+            item {
+                ShimmerBox(
+                    isShimmering = isLanguageChanging,
+                    translateAnimation = shimmerTranslateAnimation, // ✅ Pass shared animation
+                    modifier = Modifier.fillMaxWidth().then(
+                        if (isLanguageChanging) {
+                            Modifier.height(56.dp)
+                        } else {
+                            Modifier.wrapContentHeight()
+                        }
+                    )
+                ) {
+                    ProfileLanguageItem(
+                        currentLanguage = currentLanguage,
+                        onClick = { showLanguageBottomSheet = true }
+                    )
+                }
+            }
+
+            items(
+                items = profileActions,
+                key = { action -> action.title }, // ✅ Stable key
+                contentType = { "ProfileAction" } // ✅ PERFORMANCE FIX: ContentType for composition reuse
+            ) { action ->
+                ShimmerBox(
+                    isShimmering = isLanguageChanging,
+                    translateAnimation = shimmerTranslateAnimation, // ✅ Pass shared animation
+                    modifier = Modifier.fillMaxWidth().then(
+                        if (isLanguageChanging) {
+                            Modifier.height(56.dp)
+                        } else {
+                            Modifier.wrapContentHeight()
+                        }
+                    )
+                ) {
+                    ProfileItem(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        title = action.title,
+                        icon = action.icon,
+                        isLoading = uiState.isLoading,
+                        onClick = action.onClick,
+                        responsiveStyles = responsiveStyles
+                    )
+                }
+            }
+
+            // Add some bottom padding for better scrolling experience
+           /* item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }*/
+        }
+
+        // Language Selection BottomSheet
+        LanguageSelectionBottomSheet(
+            bottomSheetState = bottomSheetState,
+            isVisible = showLanguageBottomSheet,
+            currentLanguage = currentLanguage.code,
+            onLanguageSelected = { languageCode ->
+                // Start shimmer animation immediately
+                isLanguageChanging = true
+                showLanguageBottomSheet = false
+
+                coroutineScope.launch {
+                    // Small delay to let shimmer animation start
+                    delay(200)
+
+                    // Language change logic
+                    languageViewModel.requestLanguageChange(languageCode)
+                    viewModel.changeLanguage(languageCode)
+
+                    // ✅ Stop audio and hide MiniAudioController
+                    globalAudioPlayerManager?.stopAudio() ?: musicController.stopAudio()
+
+                    val pendingCode = languageViewModel.getPendingLanguage().code
+                    languageViewModel.changeLanguageInstantly(pendingCode, context)
+
+                    // Force immediate recomposition for ALL UI elements including bottom nav
+                  //  delay(300)
+
+                    // Let shimmer run for visible effect
+                    delay(700)
+
+                    // Stop shimmer
+                    isLanguageChanging = false
+
+                    // Trigger bottom nav recomposition
+                    onLanguageChanged()
+
+                    // Show success toast after animation
+                   // delay(100)
+                    languageViewModel.showLanguageChangeToast(context, pendingCode)
+                }
+            },
+            onDismiss = { showLanguageBottomSheet = false }
+        )
+
+        // Language Change Confirmation Dialog
+/*        LanguageChangeConfirmationDialog(
+            isVisible = showLanguageConfirmDialog,
+            selectedLanguage = languageViewModel.getPendingLanguage(),
+            onInstantChange = {
+                // ✅ Stop any running audio before language change and hide MiniAudioController
+                globalAudioPlayerManager?.stopAudio() ?: musicController.stopAudio()
+
+                val pendingCode = languageViewModel.getPendingLanguage().code
+                languageViewModel.changeLanguageInstantly(pendingCode, context)
+
+                // Show success toast after instant change
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    languageViewModel.showLanguageChangeToast(context, pendingCode)
+                }, 600)
+            },
+            onCancelDialog = {
+                languageViewModel.dismissLanguageConfirmDialog()
+            },
+            onDismiss = {
+                languageViewModel.dismissLanguageConfirmDialog()
+            }
+        )*/
+
+        // ✅ NEW: Banner Ad at the bottom of ProfileScreen
+        // ✅ MVI FIX: Use uiState.isPremiumUser (single source of truth)
+        if (!uiState.isPremiumUser) {
+            SmoothBannerAdSection(
+                isNetworkAvailable = isNetworkAvailable,
+                adState = uiState.adState,
+                loadingText = "Loading Profile Ad...",
+                enableDebugLogging = true
+            )
+        }
+    }
+}
+
+// Data class for profile actions
+private data class ProfileAction(
+    val title: String,
+    val icon: Int,
+    val onClick: () -> Unit
+)
+
+
+@Composable
+private fun ProfileItem(
+    modifier: Modifier = Modifier,
+    title: String,
+    isLoading: Boolean = false,
+    onClick: () -> Unit = {},
+    responsiveStyles: ResponsiveStylesOfProfileScreen,
+    icon: Int
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(enabled = !isLoading, onClick = onClick)
+            .padding(start = responsiveStyles.profileitemHorizontalPadding, end = responsiveStyles.profileitemHorizontalPadding, top = 16.dp, bottom = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        Icon( painter = painterResource(id = icon),
+            tint = Color.Unspecified,
+            contentDescription = null)
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+            color = if (isLoading) Color.Gray else Color.Unspecified
+        )
+
+       /* Spacer(modifier = Modifier.weight(1f))
+
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+        } else {
+           *//* Icon(
+                painter = painterResource(id = R.drawable.ic_language_selector_profile),
+                tint = Color.Unspecified,
+                contentDescription = title
+            )*//*
+        }*/
+    }
+}

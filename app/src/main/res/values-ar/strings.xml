@@ -1,0 +1,253 @@
+<resources>
+    <string name="app_name">Naptune</string>
+
+    <!-- ===== التنقل والعلامة التجارية ===== -->
+    <string name="app_title">Naptune</string>
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_lullaby">تهويدات</string>
+    <string name="nav_story">قصص</string>
+    <string name="nav_favourite">مفضلاتي</string>
+    <string name="nav_profile">الملف الشخصي</string>
+
+    <!-- ===== شاشة البداية ===== -->
+    <string name="splash_welcome">مرحباً بك في Naptune</string>
+    <string name="splash_description">تهويدات مهدئة وقصص دافئة لتهدئة طفلك في نوم هادئ بسرعة 🌙✨</string>
+    <string name="splash_start_now">ابدأ الآن</string>
+    <string name="content_desc_splash">شاشة بداية Naptune</string>
+
+    <!-- ===== أقسام الشاشة الرئيسية ===== -->
+    <string name="section_todays_pick">اختيار اليوم</string>
+    <string name="section_popular_lullaby">التهويدات الشائعة</string>
+    <string name="section_popular_story">القصص الشائعة</string>
+    <string name="see_all">الكل</string>
+
+    <!-- ===== مودال المؤقت ===== -->
+    <string name="timer_set_timer">ضبط المؤقت</string>
+    <string name="timer_5_min">5 دقائق</string>
+    <string name="timer_10_min">10 دقائق</string>
+    <string name="timer_15_min">15 دقيقة</string>
+    <string name="timer_custom">مخصص</string>
+    <string name="timer_hh">س س</string>
+    <string name="timer_mm">د د</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_set">تعيين</string>
+    <string name="timer_cancel">إلغاء</string>
+
+    <!-- ===== شاشة الملف الشخصي ===== -->
+    <string name="profile_language">اللغة</string>
+
+    <!-- ===== اختيار اللغة ===== -->
+    <string name="language_selection_title">اختر اللغة</string>
+    <string name="language_change_title">تم تغيير اللغة</string>
+    <string name="language_change_description">لتطبيق تغيير اللغة، يحتاج التطبيق إلى إعادة التشغيل. سيستغرق هذا لحظة واحدة فقط.</string>
+    <string name="language_switching_message">جاري تغيير اللغة...</string>
+    <string name="language_change_confirm_title">تغيير اللغة؟</string>
+    <string name="language_change_confirm_description">أعد تشغيل التطبيق لتطبيق تغيير اللغة</string>
+    <string name="action_change_instantly">إعادة تشغيل التطبيق</string>
+
+    <!-- ===== حالات الخطأ والتحميل ===== -->
+    <string name="error_loading_content">خطأ في تحميل المحتوى</string>
+    <string name="error_loading_stories">خطأ في تحميل القصص</string>
+    <string name="loading_stories_ad">جاري تحميل إعلان القصص…</string>
+    <string name="loading_music_ad">جاري تحميل إعلان الموسيقى…</string>
+    <string name="loading_favourites_ad">جاري تحميل إعلان المفضلة…</string>
+    <string name="loading_favourites">جاري تحميل مفضلاتك…</string>
+    <string name="error_something_wrong">عذراً! حدث خطأ ما</string>
+    <string name="action_retry">إعادة المحاولة</string>
+    <string name="action_try_again">جرب مرة أخرى</string>
+
+    <!-- ===== شاشة المفضلة ===== -->
+    <string name="tab_lullaby">تهويدات</string>
+    <string name="tab_story">قصص</string>
+    <string name="favourite_no_lullabies_title">لا توجد تهويدات مفضلة</string>
+    <string name="favourite_no_stories_title">لا توجد قصص مفضلة</string>
+
+    <!-- ===== أوصاف المحتوى (إمكانية الوصول) ===== -->
+    <string name="content_desc_back">رجوع</string>
+    <string name="content_desc_menu">القائمة</string>
+    <string name="content_desc_favourite">مفضل</string>
+    <string name="content_desc_download">تحميل</string>
+    <string name="content_desc_play">تشغيل</string>
+    <string name="content_desc_pause">إيقاف مؤقت</string>
+
+    <!-- ===== رسائل التنبيه ===== -->
+    <string name="toast_download_in_progress">التحميل قيد التقدم بالفعل…</string>
+    <string name="toast_network_error">خطأ في اتصال الشبكة</string>
+    <string name="toast_download_failed">فشل التحميل. يرجى المحاولة مرة أخرى.</string>
+
+    <!-- ===== نص واجهة متنوع ===== -->
+    <string name="image_unavailable">الصورة غير متوفرة</string>
+    <string name="coming_soon">قريباً!</string>
+    <string name="unknown_error">حدث خطأ غير معروف</string>
+    <string name="cannot_show_rewarded_ad">لا يمكن عرض الإعلان المكافئ</string>
+
+    <!-- ===== قارئ القصص ===== -->
+    <string name="story_reader_title">قارئ القصص</string>
+    <string name="story_read">اقرأ</string>
+    <string name="story_listen">استمع</string>
+
+    <!-- ===== بريميوم / إعلانات ===== -->
+    <string name="premium_unlock">إلغاء قفل البريميوم 👑</string>
+    <string name="watch_ad_to_unlock">شاهد الإعلان لإلغاء القفل</string>
+    <string name="ad_loading">جاري تحميل الإعلان…</string>
+    <string name="ad_failed">فشل تحميل الإعلان</string>
+
+    <!-- ===== مشغل الصوت ===== -->
+    <string name="audio_now_playing">يتم التشغيل الآن</string>
+    <string name="audio_repeat">إعادة</string>
+    <string name="audio_shuffle">عشوائي</string>
+    <string name="audio_previous">السابق</string>
+    <string name="audio_next">التالي</string>
+    <string name="audio_stop">إيقاف</string>
+    <string name="audio_loading">جاري تحميل الصوت...</string>
+    <string name="audio_not_available">الصوت غير متوفر</string>
+    <string name="story_first_message">هذه هي القصة الأولى</string>
+    <string name="story_last_message">هذه هي القصة الأخيرة</string>
+
+    <!-- ===== التحميلات ===== -->
+    <string name="download_complete">اكتمل التحميل</string>
+    <string name="download_failed">فشل التحميل</string>
+    <string name="download_starting">بدء التحميل…</string>
+    <string name="storage_permission_required">إذن التخزين مطلوب</string>
+
+    <!-- ===== بريميوم ===== -->
+    <string name="naptune_premium">👑 افتح التجربة الكاملة</string>
+    <string name="premium_already_own">أنت تملك بالفعل هذه الميزة المتقدمة!</string>
+    <string name="premium_feature_sounds">احصل على جميع الأصوات المهدئة المتقدمة</string>
+    <string name="premium_feature_timers">مؤقتات عد تنازلي مخصصة</string>
+    <string name="premium_feature_background">تشغيل الأصوات في الخلفية</string>
+    <string name="premium_feature_mixes">إنشاء خلطات صوتية غير محدودة</string>
+    <string name="premium_plan_monthly">شهري</string>
+    <string name="premium_plan_monthly_subtitle">إلغاء في أي وقت</string>
+    <string name="premium_plan_monthly_price">$3.99/شهر</string>
+    <string name="premium_plan_yearly">سنوي</string>
+    <string name="premium_plan_yearly_subtitle">$17.88/سنة</string>
+    <string name="premium_plan_yearly_price">$2.99/شهر</string>
+    <string name="premium_plan_yearly_badge">وفر 25%</string>
+    <string name="premium_plan_lifetime">مدى الحياة</string>
+    <string name="premium_plan_lifetime_subtitle">اشتر مرة واحدة، واحتفظ به إلى الأبد.</string>
+    <string name="premium_plan_lifetime_price">$59</string>
+    <string name="premium_button_proceed">متابعة</string>
+    <string name="premium_button_already">بريميوم بالفعل</string>
+    <string name="premium_restore">استعادة</string>
+    <string name="premium_privacy_terms">الخصوصية والشروط</string>
+    <string name="premium_bullet">•</string>
+    <string name="content_desc_close">إغلاق</string>
+
+    <!-- ===== الملف الشخصي ===== -->
+    <string name="profile_settings_title">الإعدادات</string>
+    <string name="profile_share_app">مشاركة التطبيق</string>
+    <string name="profile_feedback">تعليقات</string>
+    <string name="profile_rating">تقييم</string>
+    <string name="profile_privacy_policy">سياسة الخصوصية</string>
+    <string name="profile_acknowledgement">شكر وتقدير</string>
+    <string name="profile_restore_purchase">استعادة الشراء</string>
+    <string name="profile_unlock_premium">👑 إلغاء قفل البريميوم</string>
+    <string name="content_desc_profile_image">صورة الملف الشخصي</string>
+
+    <!-- ===== أصوات النوم ===== -->
+    <string name="sleep_sounds_title">🌊 أصوات النوم</string>
+    <string name="sleep_sounds_subtitle">أصوات طبيعية للاسترخاء العميق</string>
+    <string name="sleep_sounds_play">🔊 تشغيل</string>
+    <string name="sleep_sounds_duration_format"> • %1$s</string>
+
+    <!-- ===== قارئ القصص ===== -->
+    <string name="story_reader_loading">جاري تحميل القصة...</string>
+    <string name="story_reader_font_size">Aa</string>
+
+    <!-- ===== الإعدادات ===== -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_notifications">الإشعارات</string>
+    <string name="settings_auto_play">التشغيل التلقائي</string>
+    <string name="settings_night_mode">الوضع الليلي</string>
+    <string name="settings_about">حول</string>
+    <string name="settings_privacy_policy">سياسة الخصوصية</string>
+    <string name="settings_terms">شروط الخدمة</string>
+
+    <!-- ===== الحالات الفارغة ===== -->
+    <string name="empty_no_content">لا يوجد محتوى متاح</string>
+    <string name="empty_no_downloads">لا توجد تحميلات بعد</string>
+    <string name="empty_no_favourites">لا توجد مفضلة بعد</string>
+    <string name="empty_add_some_favourites">أضف بعض المفضلة لرؤيتها هنا</string>
+
+    <!-- ===== الفئات ===== -->
+    <string name="category_all">الكل</string>
+    <string name="category_popular">الشائع</string>
+    <string name="category_free">مجاني</string>
+    <string name="category_bedtime">وقت النوم</string>
+    <string name="category_nature">الطبيعة</string>
+    <string name="category_classical">كلاسيكي</string>
+
+    <!-- ===== التحقق والنماذج ===== -->
+    <string name="validation_required_field">هذا الحقل مطلوب</string>
+    <string name="validation_invalid_input">مدخل غير صحيح</string>
+    <string name="action_save">حفظ</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_share">مشاركة</string>
+    <string name="action_edit">تحرير</string>
+
+    <!-- ===== تنسيقات الوقت ===== -->
+    <string name="time_minutes_short">د</string>
+    <string name="time_hours_short">س</string>
+    <string name="time_seconds_short">ث</string>
+    <string name="time_remaining">الوقت المتبقي: %1$s</string>
+
+    <!-- ===== حالات الشبكة ===== -->
+    <string name="network_offline">أنت غير متصل</string>
+    <string name="network_connecting">جاري الاتصال…</string>
+    <string name="network_connected">متصل</string>
+    <string name="network_slow_connection">تم اكتشاف اتصال بطيء</string>
+
+    <!-- ===== النصوص المفقودة ===== -->
+    <string name="access_all_content">الوصول إلى جميع المحتويات</string>
+    <string name="action_go_back">العودة</string>
+    <string name="action_infinite">لا نهائي</string>
+    <string name="action_set_uppercase">تعيين</string>
+    <string name="badge_pro">👑 برو</string>
+    <string name="dialog_repeat_instruction">كم مرة يجب تكرار هذا؟</string>
+    <string name="dialog_repeat_settings_title">إعدادات التكرار</string>
+    <string name="dialog_sleep_timer_instruction">اختر موعد إيقاف التشغيل:</string>
+    <string name="dialog_sleep_timer_title">ضبط مؤقت النوم</string>
+    <string name="empty_favourites_lullabies_desc">ابدأ بإضافة التهويدات إلى مفضلاتك!</string>
+    <string name="empty_favourites_lullabies_title">لا توجد تهويدات مفضلة</string>
+    <string name="empty_favourites_stories_desc">ابدأ بإضافة القصص إلى مفضلاتك!</string>
+    <string name="empty_favourites_stories_title">لا توجد قصص مفضلة</string>
+    <string name="label_ad_button">إعلان</string>
+    <string name="label_lullabies">تهويدات</string>
+    <string name="label_story_info">قصة | 5.2 دقيقة</string>
+    <string name="loading_favourites_message">جاري تحميل مفضلاتك...</string>
+    <string name="player_loading_ad">🎮 جاري تحميل إعلان المشغل...</string>
+    <string name="player_please_wait">يرجى الانتظار...</string>
+    <string name="player_title_prefix">~%1$s</string>
+    <string name="repeat_times_format">%1$d مرات</string>
+    <string name="story_duration_format">قصة %1$d دقائق</string>
+    <string name="story_sample_text">في منزل صغير مريح يقع في مدينة مزدحمة، كان يعيش زوجان شابان ينتظران بفارغ الصبر وصول طفلهما الأول...</string>
+    <string name="text_bullet_separator"> • </string>
+    <string name="time_minutes_format">%1$d دقائق</string>
+    <string name="toast_alarm_triggered">تم تشغيل المنبه! سيتم إغلاق التطبيق خلال 3 ثوانٍ</string>
+    <string name="toast_download_progress">التحميل قيد التقدم بالفعل...</string>
+    <string name="toast_download_starting">بدأ تحميل %1$s...</string>
+    <string name="toast_download_success">✅ تم تحميل %1$s بنجاح!</string>
+    <string name="toast_no_email_app">لم يتم العثور على تطبيق بريد إلكتروني. يرجى إرسال التعليقات إلى: %1$s</string>
+    <string name="toast_timer_cancelled">تم إيقاف المؤقت</string>
+    <string name="toast_timer_audio_paused">تم إيقاف الصوت مؤقتًا بواسطة المؤقت</string>
+    <string name="toast_story_ended">انتهت القصة</string>
+    <string name="toast_timer_failed">فشل في ضبط المؤقت</string>
+    <string name="toast_timer_past_time">الوقت المحدد في الماضي!</string>
+    <string name="toast_timer_permission_denied">تم رفض الإذن للمنبهات الدقيقة</string>
+    <string name="toast_timer_select_valid_time">يرجى اختيار وقت صالح</string>
+
+    <!-- ===== ميزات شاشة البريميوم ===== -->
+    <string name="premium_feature_access_content">الوصول إلى المحتويات المتقدمة</string>
+    <string name="premium_feature_new_content">محتوى جديد كل شهر</string>
+    <string name="premium_feature_ad_free">تجربة خالية من الإعلانات</string>
+
+    <!-- ===== بطاقات أسعار البريميوم ===== -->
+    <string name="premium_pricing_monthly">شهري</string>
+    <string name="premium_pricing_cancel_anytime">إلغاء في أي وقت</string>
+    <string name="premium_pricing_yearly">سنوي</string>
+    <string name="premium_pricing_yearly_price">$17.88/سنة</string>
+    <string name="premium_pricing_save_badge">وفر 25%</string>
+    <string name="premium_pricing_lifetime">مدى الحياة</string>
+    <string name="premium_pricing_lifetime_subtitle">اشتر مرة واحدة، واحتفظ به إلى الأبد.</string>
+</resources>

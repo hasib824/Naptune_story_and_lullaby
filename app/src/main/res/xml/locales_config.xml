@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Locale Configuration for Per-App Language Preferences (Android 13+)
+    This allows users to set language preferences for the app in System Settings
+    Backward compatibility is handled automatically by AppCompatDelegate
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- English -->
+    <locale android:name="en" />
+
+    <!-- Spanish -->
+    <locale android:name="es" />
+
+    <!-- French -->
+    <locale android:name="fr" />
+
+    <!-- German -->
+    <locale android:name="de" />
+
+    <!-- Portuguese -->
+    <locale android:name="pt" />
+
+    <!-- Hindi -->
+    <locale android:name="hi" />
+
+    <!-- Arabic (RTL) -->
+    <locale android:name="ar" />
+</locale-config>

@@ -1,0 +1,253 @@
+<resources>
+    <string name="app_name">NapTune</string>
+
+    <!-- ===== नेविगेशन और ब्रांड ===== -->
+    <string name="app_title">NapTune</string>
+    <string name="nav_home">होम</string>
+    <string name="nav_lullaby">लोरी</string>
+    <string name="nav_story">कहानियाँ</string>
+    <string name="nav_favourite">मेरे पसंदीदा</string>
+    <string name="nav_profile">प्रोफाइल</string>
+
+    <!-- ===== स्प्लैश स्क्रीन ===== -->
+    <string name="splash_welcome">NapTune में आपका स्वागत है</string>
+    <string name="splash_description">आपके बच्चे को शीघ्रता से शांतिपूर्ण नींद में सुलाने के लिए सुकून देने वाली लोरियाँ और दिल को छूने वाली कहानियाँ 🌙✨</string>
+    <string name="splash_start_now">अभी शुरू करें</string>
+    <string name="content_desc_splash">Naptune स्प्लैश स्क्रीन</string>
+
+    <!-- ===== मुख्य स्क्रीन अनुभाग ===== -->
+    <string name="section_todays_pick">आज की पसंद</string>
+    <string name="section_popular_lullaby">लोकप्रिय लोरी</string>
+    <string name="section_popular_story">लोकप्रिय कहानियाँ</string>
+    <string name="see_all">सभी</string>
+
+    <!-- ===== टाइमर मॉडल ===== -->
+    <string name="timer_set_timer">टाइमर सेट करें</string>
+    <string name="timer_5_min">5 मिनट</string>
+    <string name="timer_10_min">10 मिनट</string>
+    <string name="timer_15_min">15 मिनट</string>
+    <string name="timer_custom">कस्टम</string>
+    <string name="timer_hh">घंटे</string>
+    <string name="timer_mm">मिनट</string>
+    <string name="action_cancel">रद्द करें</string>
+    <string name="action_set">सेट करें</string>
+    <string name="timer_cancel">रद्द करें</string>
+
+    <!-- ===== प्रोफाइल स्क्रीन ===== -->
+    <string name="profile_language">भाषा</string>
+
+    <!-- ===== भाषा चयन ===== -->
+    <string name="language_selection_title">भाषा चुनें</string>
+    <string name="language_change_title">भाषा बदल गई</string>
+    <string name="language_change_description">भाषा परिवर्तन लागू करने के लिए, ऐप को पुनः आरंभ करना होगा। इसमें केवल एक क्षण लगेगा।</string>
+    <string name="language_switching_message">भाषा बदली जा रही है...</string>
+    <string name="language_change_confirm_title">भाषा बदलें?</string>
+    <string name="language_change_confirm_description">भाषा परिवर्तन लागू करने के लिए ऐप को पुनः आरंभ करें</string>
+    <string name="action_change_instantly">ऐप पुनः आरंभ करें</string>
+
+    <!-- ===== त्रुटि और लोडिंग स्थितियाँ ===== -->
+    <string name="error_loading_content">कंटेंट लोड करने में त्रुटि</string>
+    <string name="error_loading_stories">कहानियाँ लोड करने में त्रुटि</string>
+    <string name="loading_stories_ad">कहानियों का विज्ञापन लोड हो रहा है…</string>
+    <string name="loading_music_ad">संगीत का विज्ञापन लोड हो रहा है…</string>
+    <string name="loading_favourites_ad">पसंदीदा का विज्ञापन लोड हो रहा है…</string>
+    <string name="loading_favourites">आपकी पसंदीदा लोड हो रही हैं…</string>
+    <string name="error_something_wrong">ओह! कुछ गलत हुआ</string>
+    <string name="action_retry">पुन: प्रयास करें</string>
+    <string name="action_try_again">फिर से कोशिश करें</string>
+
+    <!-- ===== पसंदीदा स्क्रीन ===== -->
+    <string name="tab_lullaby">लोरी</string>
+    <string name="tab_story">कहानियाँ</string>
+    <string name="favourite_no_lullabies_title">कोई पसंदीदा लोरी नहीं</string>
+    <string name="favourite_no_stories_title">कोई पसंदीदा कहानी नहीं</string>
+
+    <!-- ===== सामग्री विवरण (पहुंच-क्षमता) ===== -->
+    <string name="content_desc_back">वापस</string>
+    <string name="content_desc_menu">मेन्यू</string>
+    <string name="content_desc_favourite">पसंदीदा</string>
+    <string name="content_desc_download">डाउनलोड</string>
+    <string name="content_desc_play">चलाएं</string>
+    <string name="content_desc_pause">रोकें</string>
+
+    <!-- ===== टोस्ट संदेश ===== -->
+    <string name="toast_download_in_progress">डाउनलोड पहले से चल रहा है…</string>
+    <string name="toast_network_error">नेटवर्क कनेक्शन त्रुटि</string>
+    <string name="toast_download_failed">डाउनलोड असफल। कृपया पुन: प्रयास करें।</string>
+
+    <!-- ===== विविध UI टेक्स्ट ===== -->
+    <string name="image_unavailable">छवि उपलब्ध नहीं</string>
+    <string name="coming_soon">जल्द आ रहा है!</string>
+    <string name="unknown_error">अज्ञात त्रुटि हुई</string>
+    <string name="cannot_show_rewarded_ad">रिवॉर्ड विज्ञापन नहीं दिखा सकते</string>
+
+    <!-- ===== कहानी रीडर ===== -->
+    <string name="story_reader_title">कहानी रीडर</string>
+    <string name="story_read">पढ़ें</string>
+    <string name="story_listen">सुनें</string>
+
+    <!-- ===== प्रीमियम / विज्ञापन ===== -->
+    <string name="premium_unlock">👑 प्रीमियम अनलॉक करें</string>
+    <string name="watch_ad_to_unlock">अनलॉक करने के लिए विज्ञापन देखें</string>
+    <string name="ad_loading">विज्ञापन लोड हो रहा है…</string>
+    <string name="ad_failed">विज्ञापन लोड नहीं हुआ</string>
+
+    <!-- ===== ऑडियो प्लेयर ===== -->
+    <string name="audio_now_playing">अब चल रहा है</string>
+    <string name="audio_repeat">दोहराएं</string>
+    <string name="audio_shuffle">शफल</string>
+    <string name="audio_previous">पिछला</string>
+    <string name="audio_next">अगला</string>
+    <string name="audio_stop">रोकें</string>
+    <string name="audio_loading">ऑडियो लोड हो रहा है...</string>
+    <string name="audio_not_available">ऑडियो उपलब्ध नहीं है</string>
+    <string name="story_first_message">यह पहली कहानी है</string>
+    <string name="story_last_message">यह अंतिम कहानी है</string>
+
+    <!-- ===== डाउनलोड ===== -->
+    <string name="download_complete">डाउनलोड पूरा</string>
+    <string name="download_failed">डाउनलोड असफल</string>
+    <string name="download_starting">डाउनलोड शुरू हो रहा है…</string>
+    <string name="storage_permission_required">स्टोरेज अनुमति आवश्यक</string>
+
+    <!-- ===== प्रीमियम ===== -->
+    <string name="naptune_premium">पूरा अनुभव अनलॉक करें 👑</string>
+    <string name="premium_already_own">आपके पास पहले से ही यह प्रीमियम सुविधा है!</string>
+    <string name="premium_feature_sounds">सभी प्रीमियम आरामदायक ध्वनियों का लाभ उठाएं</string>
+    <string name="premium_feature_timers">व्यक्तिगत काउंटडाउन टाइमर</string>
+    <string name="premium_feature_background">बैकग्राउंड में ध्वनियाँ चलाएं</string>
+    <string name="premium_feature_mixes">असीमित ऑडियो मिक्स बनाएं</string>
+    <string name="premium_plan_monthly">मासिक</string>
+    <string name="premium_plan_monthly_subtitle">किसी भी समय रद्द करें</string>
+    <string name="premium_plan_monthly_price">$3.99/माह</string>
+    <string name="premium_plan_yearly">वार्षिक</string>
+    <string name="premium_plan_yearly_subtitle">$17.88/वर्ष</string>
+    <string name="premium_plan_yearly_price">$2.99/माह</string>
+    <string name="premium_plan_yearly_badge">25% बचाएं</string>
+    <string name="premium_plan_lifetime">जीवन भर</string>
+    <string name="premium_plan_lifetime_subtitle">एक बार खरीदें, हमेशा के लिए रखें।</string>
+    <string name="premium_plan_lifetime_price">$59</string>
+    <string name="premium_button_proceed">आगे बढ़ें</string>
+    <string name="premium_button_already">पहले से प्रीमियम</string>
+    <string name="premium_restore">रिस्टोर करें</string>
+    <string name="premium_privacy_terms">गोपनीयता और नियम</string>
+    <string name="premium_bullet">•</string>
+    <string name="content_desc_close">बंद करें</string>
+
+    <!-- ===== प्रोफाइल ===== -->
+    <string name="profile_settings_title">सेटिंग्स</string>
+    <string name="profile_share_app">ऐप शेयर करें</string>
+    <string name="profile_feedback">फीडबैक</string>
+    <string name="profile_rating">रेटिंग</string>
+    <string name="profile_privacy_policy">गोपनीयता नीति</string>
+    <string name="profile_acknowledgement">आभार</string>
+    <string name="profile_restore_purchase">खरीदारी रिस्टोर करें</string>
+    <string name="profile_unlock_premium">👑 प्रीमियम अनलॉक करें</string>
+    <string name="content_desc_profile_image">प्रोफाइल इमेज</string>
+
+    <!-- ===== नींद की आवाज़ें ===== -->
+    <string name="sleep_sounds_title">🌊 नींद की आवाज़ें</string>
+    <string name="sleep_sounds_subtitle">गहरे आराम के लिए प्राकृतिक ध्वनियाँ</string>
+    <string name="sleep_sounds_play">🔊 चलाएं</string>
+    <string name="sleep_sounds_duration_format"> • %1$s</string>
+
+    <!-- ===== कहानी रीडर ===== -->
+    <string name="story_reader_loading">कहानी लोड हो रही है...</string>
+    <string name="story_reader_font_size">Aa</string>
+
+    <!-- ===== सेटिंग्स ===== -->
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="settings_notifications">सूचनाएं</string>
+    <string name="settings_auto_play">ऑटो प्ले</string>
+    <string name="settings_night_mode">नाइट मोड</string>
+    <string name="settings_about">हमारे बारे में</string>
+    <string name="settings_privacy_policy">गोपनीयता नीति</string>
+    <string name="settings_terms">सेवा की शर्तें</string>
+
+    <!-- ===== खाली अवस्थाएं ===== -->
+    <string name="empty_no_content">कोई सामग्री उपलब्ध नहीं</string>
+    <string name="empty_no_downloads">अभी तक कोई डाउनलोड नहीं</string>
+    <string name="empty_no_favourites">अभी तक कोई पसंदीदा नहीं</string>
+    <string name="empty_add_some_favourites">उन्हें यहाँ देखने के लिए कुछ पसंदीदा जोड़ें</string>
+
+    <!-- ===== श्रेणियां ===== -->
+    <string name="category_all">सभी</string>
+    <string name="category_popular">लोकप्रिय</string>
+    <string name="category_free">मुफ्त</string>
+    <string name="category_bedtime">सोने का समय</string>
+    <string name="category_nature">प्रकृति</string>
+    <string name="category_classical">शास्त्रीय</string>
+
+    <!-- ===== सत्यापन और फॉर्म ===== -->
+    <string name="validation_required_field">यह फील्ड आवश्यक है</string>
+    <string name="validation_invalid_input">अमान्य इनपुट</string>
+    <string name="action_save">सेव करें</string>
+    <string name="action_delete">हटाएं</string>
+    <string name="action_share">साझा करें</string>
+    <string name="action_edit">संपादित करें</string>
+
+    <!-- ===== समय प्रारूप ===== -->
+    <string name="time_minutes_short">मिनट</string>
+    <string name="time_hours_short">घंटे</string>
+    <string name="time_seconds_short">सेकंड</string>
+    <string name="time_remaining">शेष समय: %1$s</string>
+
+    <!-- ===== नेटवर्क अवस्थाएं ===== -->
+    <string name="network_offline">आप ऑफलाइन हैं</string>
+    <string name="network_connecting">कनेक्ट हो रहा है…</string>
+    <string name="network_connected">कनेक्टेड</string>
+    <string name="network_slow_connection">धीमा कनेक्शन मिला</string>
+
+    <!-- ===== गुम टेक्स्ट ===== -->
+    <string name="access_all_content">सभी सामग्री का उपयोग करें</string>
+    <string name="action_go_back">वापस जाएं</string>
+    <string name="action_infinite">अनंत</string>
+    <string name="action_set_uppercase">सेट करें</string>
+    <string name="badge_pro">👑 प्रो</string>
+    <string name="dialog_repeat_instruction">इसे कितनी बार दोहराया जाना चाहिए?</string>
+    <string name="dialog_repeat_settings_title">दोहराव सेटिंग्स</string>
+    <string name="dialog_sleep_timer_instruction">प्लेबैक बंद करने का समय चुनें:</string>
+    <string name="dialog_sleep_timer_title">स्लीप टाइमर सेट करें</string>
+    <string name="empty_favourites_lullabies_desc">अपनी पसंदीदा में लोरियाँ जोड़ना शुरू करें!</string>
+    <string name="empty_favourites_lullabies_title">कोई पसंदीदा लोरी नहीं</string>
+    <string name="empty_favourites_stories_desc">अपनी पसंदीदा में कहानियाँ जोड़ना शुरू करें!</string>
+    <string name="empty_favourites_stories_title">कोई पसंदीदा कहानी नहीं</string>
+    <string name="label_ad_button">विज्ञापन</string>
+    <string name="label_lullabies">लोरियाँ</string>
+    <string name="label_story_info">कहानी | 5.2 मिनट</string>
+    <string name="loading_favourites_message">आपकी पसंदीदा लोड हो रही हैं...</string>
+    <string name="player_loading_ad">🎮 प्लेयर विज्ञापन लोड हो रहा है...</string>
+    <string name="player_please_wait">कृपया प्रतीक्षा करें...</string>
+    <string name="player_title_prefix">~%1$s</string>
+    <string name="repeat_times_format">%1$d बार</string>
+    <string name="story_duration_format">%1$d मिनट की कहानी</string>
+    <string name="story_sample_text">एक हलचल भरे शहर में स्थित एक आरामदायक छोटे घर में, एक युवा जोड़ा अपने पहले बच्चे के आने का बेसब्री से इंतज़ार कर रहा था...</string>
+    <string name="text_bullet_separator"> • </string>
+    <string name="time_minutes_format">%1$d मिनट</string>
+    <string name="toast_alarm_triggered">अलार्म बजा! ऐप 3 सेकंड में बंद हो जाएगा</string>
+    <string name="toast_download_progress">डाउनलोड पहले से चल रहा है...</string>
+    <string name="toast_download_starting">%1$s डाउनलोड शुरू हुआ...</string>
+    <string name="toast_download_success">✅ %1$s सफलतापूर्वक डाउनलोड हुआ!</string>
+    <string name="toast_no_email_app">कोई ईमेल ऐप नहीं मिला। कृपया फीडबैक भेजें: %1$s</string>
+    <string name="toast_timer_cancelled">टाइमर रोक दिया गया</string>
+    <string name="toast_timer_failed">टाइमर सेट करने में असफल</string>
+    <string name="toast_timer_past_time">चुना गया समय बीत चुका है!</string>
+    <string name="toast_timer_permission_denied">सटीक अलार्म की अनुमति नकारी गई</string>
+    <string name="toast_timer_select_valid_time">कृपया एक वैध समय चुनें</string>
+    <string name="toast_timer_audio_paused">टाइमर द्वारा ऑडियो रोक दिया गया</string>
+    <string name="toast_story_ended">कहानी समाप्त हुई</string>
+
+    <!-- ===== प्रीमियम स्क्रीन सुविधाएं ===== -->
+    <string name="premium_feature_access_content">प्रीमियम सामग्री का उपयोग</string>
+    <string name="premium_feature_new_content">हर महीने नई सामग्री</string>
+    <string name="premium_feature_ad_free">विज्ञापन मुक्त अनुभव</string>
+
+    <!-- ===== प्रीमियम मूल्य निर्धारण कार्ड ===== -->
+    <string name="premium_pricing_monthly">मासिक</string>
+    <string name="premium_pricing_cancel_anytime">किसी भी समय रद्द करें</string>
+    <string name="premium_pricing_yearly">वार्षिक</string>
+    <string name="premium_pricing_yearly_price">$17.88/वर्ष</string>
+    <string name="premium_pricing_save_badge">25% बचाएं</string>
+    <string name="premium_pricing_lifetime">जीवन भर</string>
+    <string name="premium_pricing_lifetime_subtitle">एक बार खरीदें, हमेशा के लिए रखें।</string>
+</resources>

@@ -1,0 +1,221 @@
+package com.naptune.lullabyandstory.presentation.story
+
+import android.util.Log
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.naptune.lullabyandstory.domain.model.StoryDomainModel
+import com.naptune.lullabyandstory.presentation.components.common.LoadingIndicator
+import com.naptune.lullabyandstory.presentation.components.story.MakeStoryList
+import com.naptune.lullabyandstory.presentation.components.common.FilterHeader
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.naptune.lullabyandstory.presentation.components.admob.SmoothBannerAdSection
+import com.naptune.lullabyandstory.data.network.admob.AdMobDataSource
+import com.naptune.lullabyandstory.domain.model.AdSizeType
+import com.naptune.lullabyandstory.R
+import com.naptune.lullabyandstory.presentation.components.RewardVideoBottomSheet
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StoryScreen(
+    onBackClick: () -> Boolean,
+    onStroyItemClick: (StoryDomainModel) -> Unit,
+    contentBottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
+    navController: androidx.navigation.NavController,
+    viewModel: StoryViewModel = hiltViewModel()
+) {
+    // ✅ Get currently playing story ID from ViewModel (which gets it from MusicController)
+    val currentlyPlayingStoryId by viewModel.currentlyPlayingStoryId.collectAsStateWithLifecycle()
+    val isNetworkAvailable by viewModel.isNetworkAvailable.collectAsStateWithLifecycle()
+
+    // ✅ Debug logs
+    Log.d("StoryScreen", "📚 Currently playing story ID: $currentlyPlayingStoryId")
+
+    Log.d("StoryScreen", "🎬 StoryScreen composable called")
+
+    LaunchedEffect(Unit) {
+        Log.d("StoryScreen", "🚀 LaunchedEffect triggered")
+        // viewModel.onhandleIntent(StoryIntent.FetchStories)
+
+        // Initialize AdMob and load banner ad
+        viewModel.onhandleIntent(StoryIntent.InitializeAds)
+        viewModel.onhandleIntent(
+            StoryIntent.LoadBannerAd(
+                adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
+                adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER
+            )
+        )
+    }
+
+    val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+    Log.d("StoryScreen", "📊 Current UI State: $uiState")
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        when (uiState) {
+            is StoryUiState.Content -> {
+                // ✅ Reusable Smooth Banner Ad Component with story-themed loading
+                SmoothBannerAdSection(
+                    isNetworkAvailable = isNetworkAvailable,
+                    adState = uiState.adState,
+                    loadingText = "Loading Stories Ad...", // Custom loading text for StoryScreen
+                    enableDebugLogging = true // Enable debug logging for StoryScreen
+                )
+
+                // Content with padding
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 0.dp, end = 0.dp, top = 0.dp)
+                ) {
+                    Log.d("StoryScreen", "✅ Showing content with ${uiState.storyList.size} stories")
+
+                    val context = LocalContext.current
+
+                    // ✅ NEW: Toggle state for filter (false = All, true = Popular)
+                    var isShowingPopular by remember { mutableStateOf(false) }
+
+                    // ✅ NEW: Watch Ad Bottom Sheet state
+                    var showWatchAdSheet by remember { mutableStateOf(false) }
+                    var selectedStoryForAd by remember { mutableStateOf<StoryDomainModel?>(null) }
+                    val watchAdSheetState = rememberModalBottomSheetState()
+
+                    // ✅ Determine which stories to show based on filter state
+                    val displayStories = if (isShowingPopular) {
+                        uiState.popularStories
+                    } else {
+                        uiState.filteredStories // All stories
+                    }
+
+                    // ✅ NEW: Filter Header with Title and Toggle Button
+                    FilterHeader(
+                        contentType = "Stories",
+                        isShowingPopular = isShowingPopular,
+                        onFilterClick = {
+                            isShowingPopular = !isShowingPopular
+                        }
+                    )
+
+                    // ✅ Show filtered stories
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        MakeStoryList(
+                            data = displayStories,
+                            onStoryItemClick = { story ->
+                                // ✅ Just call the original callback - MusicController will handle the rest
+                                Log.d(
+                                    "StoryScreen",
+                                    "📚 Playing story: ${story.storyName} (ID: ${story.documentId})"
+                                )
+                                onStroyItemClick(story)
+                            },
+                            contentBottomPadding = contentBottomPadding,
+                            isCollapsed = true,
+                            isBottomSheetVisible = false,
+                            // ✅ Pass currently playing ID from ViewModel
+                            currentlyPlayingId = currentlyPlayingStoryId,
+                            // ✅ Rewarded ad callback
+                            onAdButtonClick = { story ->
+                                // ✅ Show Watch Ad Bottom Sheet instead of directly showing ad
+                                selectedStoryForAd = story
+                                showWatchAdSheet = true
+                            },
+                            // ✅ NEW: Pass session-unlocked IDs to hide ad badge for unlocked items
+                            adUnlockedIds = uiState.adUnlockedIds
+                        )
+                    }
+
+                    // ✅ Reward Video Bottom Sheet
+                    if (showWatchAdSheet) {
+                        RewardVideoBottomSheet(
+                            onDismiss = {
+                                showWatchAdSheet = false
+                                selectedStoryForAd = null
+                            },
+                            onWatchClick = {
+                                // When user clicks "Watch", trigger the rewarded ad
+                                selectedStoryForAd?.let { story ->
+                                    Log.d(
+                                        "StoryScreen",
+                                        "🎁 Rewarded ad triggered for story: ${story.storyName}"
+                                    )
+                                    if (context is android.app.Activity) {
+                                        viewModel.onhandleIntent(
+                                            StoryIntent.ShowRewardedAd(
+                                                adUnitId = AdMobDataSource.TEST_REWARDED_AD_UNIT_ID,
+                                                activity = context,
+                                                story = story
+                                            )
+                                        )
+                                    } else {
+                                        Log.e(
+                                            "StoryScreen",
+                                            "❌ Context is not an Activity, cannot show rewarded ad"
+                                        )
+                                    }
+                                }
+                                showWatchAdSheet = false
+                                selectedStoryForAd = null
+                            },
+                            sheetState = watchAdSheetState
+                        )
+                    }
+                }
+            }
+
+            StoryUiState.IsLoading -> {
+                Log.d("StoryScreen", "⏳ Showing loading...")
+                LoadingIndicator()
+            }
+
+            is StoryUiState.Error -> {
+                Log.e("StoryScreen", "❌ Showing error: ${uiState.message}")
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.error_loading_stories),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = uiState.message,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            Log.d("StoryScreen", "🔄 Retry button clicked")
+                            viewModel.onhandleIntent(StoryIntent.FetchStories)
+                        }
+                    ) {
+                        Text(stringResource(R.string.action_retry))
+                    }
+                }
+            }
+        }
+    }
+}
+

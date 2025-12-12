@@ -1,0 +1,253 @@
+<resources>
+    <string name="app_name">Naptune</string>
+
+    <!-- ===== NAVIGATION ET MARQUE ===== -->
+    <string name="app_title">Naptune</string>
+    <string name="nav_home">Accueil</string>
+    <string name="nav_lullaby">Berceuses</string>
+    <string name="nav_story">Histoires</string>
+    <string name="nav_favourite">Mes Favoris</string>
+    <string name="nav_profile">Profil</string>
+
+    <!-- ===== ÉCRAN D\'ACCUEIL ===== -->
+    <string name="splash_welcome">Bienvenue dans Naptune</string>
+    <string name="splash_description">Berceuses apaisantes et histoires réconfortantes pour endormir paisiblement votre bébé 🌙✨</string>
+    <string name="splash_start_now">COMMENCER MAINTENANT</string>
+    <string name="content_desc_splash">Écran d\'accueil Naptune</string>
+
+    <!-- ===== SECTIONS DE L\'ÉCRAN PRINCIPAL ===== -->
+    <string name="section_todays_pick">Sélection du Jour</string>
+    <string name="section_popular_lullaby">Berceuses Populaires</string>
+    <string name="section_popular_story">Histoires Populaires</string>
+    <string name="see_all">Tout</string>
+
+    <!-- ===== MODAL DE MINUTERIE ===== -->
+    <string name="timer_set_timer">Régler la Minuterie</string>
+    <string name="timer_5_min">5 Min</string>
+    <string name="timer_10_min">10 Min</string>
+    <string name="timer_15_min">15 Min</string>
+    <string name="timer_custom">Personnalisé</string>
+    <string name="timer_hh">HH</string>
+    <string name="timer_mm">MM</string>
+    <string name="action_cancel">Annuler</string>
+    <string name="action_set">Définir</string>
+    <string name="timer_cancel">ANNULER</string>
+
+    <!-- ===== ÉCRAN DE PROFIL ===== -->
+    <string name="profile_language">Langue</string>
+
+    <!-- ===== SÉLECTION DE LANGUE ===== -->
+    <string name="language_selection_title">Sélectionner la Langue</string>
+    <string name="language_change_title">Langue Modifiée</string>
+    <string name="language_change_description">Pour appliquer le changement de langue, l\'application doit redémarrer. Cela ne prendra qu\'un instant.</string>
+    <string name="language_switching_message">Changement de langue...</string>
+    <string name="language_change_confirm_title">Changer de Langue ?</string>
+    <string name="language_change_confirm_description">Redémarrez l\'application pour appliquer le changement de langue</string>
+    <string name="action_change_instantly">Redémarrer l\'App</string>
+
+    <!-- ===== ÉTATS D\'ERREUR ET DE CHARGEMENT ===== -->
+    <string name="error_loading_content">Erreur de chargement du contenu</string>
+    <string name="error_loading_stories">Erreur de chargement des histoires</string>
+    <string name="loading_stories_ad">Chargement de la Publicité Histoires…</string>
+    <string name="loading_music_ad">Chargement de la Publicité Musique…</string>
+    <string name="loading_favourites_ad">Chargement de la Publicité Favoris…</string>
+    <string name="loading_favourites">Chargement de vos favoris…</string>
+    <string name="error_something_wrong">Oups ! Quelque chose s\'est mal passé</string>
+    <string name="action_retry">Réessayer</string>
+    <string name="action_try_again">Essayer à Nouveau</string>
+
+    <!-- ===== ÉCRAN DES FAVORIS ===== -->
+    <string name="tab_lullaby">Berceuses</string>
+    <string name="tab_story">Histoires</string>
+    <string name="favourite_no_lullabies_title">Aucune Berceuse Favorite</string>
+    <string name="favourite_no_stories_title">Aucune Histoire Favorite</string>
+
+    <!-- ===== DESCRIPTIONS DE CONTENU (ACCESSIBILITÉ) ===== -->
+    <string name="content_desc_back">Retour</string>
+    <string name="content_desc_menu">Menu</string>
+    <string name="content_desc_favourite">Favori</string>
+    <string name="content_desc_download">Télécharger</string>
+    <string name="content_desc_play">Lire</string>
+    <string name="content_desc_pause">Pause</string>
+
+    <!-- ===== MESSAGES TOAST ===== -->
+    <string name="toast_download_in_progress">Téléchargement déjà en cours…</string>
+    <string name="toast_network_error">Erreur de connexion réseau</string>
+    <string name="toast_download_failed">Téléchargement échoué. Veuillez réessayer.</string>
+
+    <!-- ===== TEXTE D\'INTERFACE DIVERS ===== -->
+    <string name="image_unavailable">Image indisponible</string>
+    <string name="coming_soon">Bientôt Disponible !</string>
+    <string name="unknown_error">Une erreur inconnue s\'est produite</string>
+    <string name="cannot_show_rewarded_ad">Impossible d\'afficher la publicité récompensée</string>
+
+    <!-- ===== LECTEUR D\'HISTOIRES ===== -->
+    <string name="story_reader_title">Lecteur d\'Histoires</string>
+    <string name="story_read">Lire</string>
+    <string name="story_listen">Écouter</string>
+
+    <!-- ===== PREMIUM / PUBLICITÉS ===== -->
+    <string name="premium_unlock">👑 Débloquer Premium</string>
+    <string name="watch_ad_to_unlock">Regarder la Publicité pour Débloquer</string>
+    <string name="ad_loading">Chargement de la Publicité…</string>
+    <string name="ad_failed">Échec du chargement de la publicité</string>
+
+    <!-- ===== LECTEUR AUDIO ===== -->
+    <string name="audio_now_playing">En Cours de Lecture</string>
+    <string name="audio_repeat">Répéter</string>
+    <string name="audio_shuffle">Lecture Aléatoire</string>
+    <string name="audio_previous">Précédent</string>
+    <string name="audio_next">Suivant</string>
+    <string name="audio_stop">Arrêter</string>
+    <string name="audio_loading">Chargement audio...</string>
+    <string name="audio_not_available">Audio non disponible</string>
+    <string name="story_first_message">C\'est la première histoire</string>
+    <string name="story_last_message">C\'est la dernière histoire</string>
+
+    <!-- ===== TÉLÉCHARGEMENTS ===== -->
+    <string name="download_complete">Téléchargement Terminé</string>
+    <string name="download_failed">Téléchargement Échoué</string>
+    <string name="download_starting">Démarrage du Téléchargement…</string>
+    <string name="storage_permission_required">Permission de stockage requise</string>
+
+    <!-- ===== PREMIUM ===== -->
+    <string name="naptune_premium">Débloquez l\'expérience complète 👑</string>
+    <string name="premium_already_own">Vous possédez déjà cette fonctionnalité premium !</string>
+    <string name="premium_feature_sounds">Profitez de Tous les Sons Relaxants Premium</string>
+    <string name="premium_feature_timers">Minuteries de Compte à Rebours Personnalisées</string>
+    <string name="premium_feature_background">Écouter les Sons en Arrière-plan</string>
+    <string name="premium_feature_mixes">Créer des Mélanges Audio Illimités</string>
+    <string name="premium_plan_monthly">Mensuel</string>
+    <string name="premium_plan_monthly_subtitle">Annulez à tout moment</string>
+    <string name="premium_plan_monthly_price">$3.99/mois</string>
+    <string name="premium_plan_yearly">Annuel</string>
+    <string name="premium_plan_yearly_subtitle">$17.88/Année</string>
+    <string name="premium_plan_yearly_price">$2.99/mois</string>
+    <string name="premium_plan_yearly_badge">Économisez 25%</string>
+    <string name="premium_plan_lifetime">À Vie</string>
+    <string name="premium_plan_lifetime_subtitle">Achetez une fois, gardez pour toujours.</string>
+    <string name="premium_plan_lifetime_price">$59</string>
+    <string name="premium_button_proceed">Continuer</string>
+    <string name="premium_button_already">Déjà Premium</string>
+    <string name="premium_restore">Restaurer</string>
+    <string name="premium_privacy_terms">Confidentialité et Conditions</string>
+    <string name="premium_bullet">•</string>
+    <string name="content_desc_close">Fermer</string>
+
+    <!-- ===== PROFIL ===== -->
+    <string name="profile_settings_title">Paramètres</string>
+    <string name="profile_share_app">Partager l\'App</string>
+    <string name="profile_feedback">Commentaires</string>
+    <string name="profile_rating">Évaluation</string>
+    <string name="profile_privacy_policy">Politique de Confidentialité</string>
+    <string name="profile_acknowledgement">Remerciements</string>
+    <string name="profile_restore_purchase">Restaurer l\'Achat</string>
+    <string name="profile_unlock_premium">👑 Débloquer Premium</string>
+    <string name="content_desc_profile_image">Image de Profil</string>
+
+    <!-- ===== SONS POUR DORMIR ===== -->
+    <string name="sleep_sounds_title">🌊 Sons de Sommeil</string>
+    <string name="sleep_sounds_subtitle">Sons naturels pour une relaxation profonde</string>
+    <string name="sleep_sounds_play">🔊 Lire</string>
+    <string name="sleep_sounds_duration_format"> • %1$s</string>
+
+    <!-- ===== LECTEUR D\'HISTOIRES ===== -->
+    <string name="story_reader_loading">Chargement de l\'histoire...</string>
+    <string name="story_reader_font_size">Aa</string>
+
+    <!-- ===== PARAMÈTRES ===== -->
+    <string name="settings_title">Paramètres</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_auto_play">Lecture Automatique</string>
+    <string name="settings_night_mode">Mode Nuit</string>
+    <string name="settings_about">À Propos</string>
+    <string name="settings_privacy_policy">Politique de Confidentialité</string>
+    <string name="settings_terms">Conditions d\'Utilisation</string>
+
+    <!-- ===== ÉTATS VIDES ===== -->
+    <string name="empty_no_content">Aucun contenu disponible</string>
+    <string name="empty_no_downloads">Aucun téléchargement pour le moment</string>
+    <string name="empty_no_favourites">Aucun favori pour le moment</string>
+    <string name="empty_add_some_favourites">Ajoutez des favoris pour les voir ici</string>
+
+    <!-- ===== CATÉGORIES ===== -->
+    <string name="category_all">Tous</string>
+    <string name="category_popular">Populaires</string>
+    <string name="category_free">Gratuits</string>
+    <string name="category_bedtime">Heure du Coucher</string>
+    <string name="category_nature">Nature</string>
+    <string name="category_classical">Classique</string>
+
+    <!-- ===== VALIDATION ET FORMULAIRES ===== -->
+    <string name="validation_required_field">Ce champ est obligatoire</string>
+    <string name="validation_invalid_input">Saisie invalide</string>
+    <string name="action_save">Sauvegarder</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="action_share">Partager</string>
+    <string name="action_edit">Modifier</string>
+
+    <!-- ===== FORMATS DE TEMPS ===== -->
+    <string name="time_minutes_short">min</string>
+    <string name="time_hours_short">h</string>
+    <string name="time_seconds_short">sec</string>
+    <string name="time_remaining">Temps restant : %1$s</string>
+
+    <!-- ===== ÉTATS RÉSEAU ===== -->
+    <string name="network_offline">Vous êtes hors ligne</string>
+    <string name="network_connecting">Connexion…</string>
+    <string name="network_connected">Connecté</string>
+    <string name="network_slow_connection">Connexion lente détectée</string>
+
+    <!-- ===== TEXTES MANQUANTS ===== -->
+    <string name="access_all_content">Accéder à tout le contenu</string>
+    <string name="action_go_back">Retourner</string>
+    <string name="action_infinite">Infini</string>
+    <string name="action_set_uppercase">DÉFINIR</string>
+    <string name="badge_pro">👑 Pro</string>
+    <string name="dialog_repeat_instruction">Combien de fois faut-il répéter ceci ?</string>
+    <string name="dialog_repeat_settings_title">Paramètres de répétition</string>
+    <string name="dialog_sleep_timer_instruction">Choisissez quand arrêter la lecture :</string>
+    <string name="dialog_sleep_timer_title">Régler la minuterie de sommeil</string>
+    <string name="empty_favourites_lullabies_desc">Commencez à ajouter des berceuses à vos favoris !</string>
+    <string name="empty_favourites_lullabies_title">Aucune berceuse favorite</string>
+    <string name="empty_favourites_stories_desc">Commencez à ajouter des histoires à vos favoris !</string>
+    <string name="empty_favourites_stories_title">Aucune histoire favorite</string>
+    <string name="label_ad_button">Pub</string>
+    <string name="label_lullabies">Berceuses</string>
+    <string name="label_story_info">Histoire | 5,2m</string>
+    <string name="loading_favourites_message">Chargement de vos favoris...</string>
+    <string name="player_loading_ad">🎮 Chargement de la publicité du lecteur...</string>
+    <string name="player_please_wait">Veuillez patienter...</string>
+    <string name="player_title_prefix">~%1$s</string>
+    <string name="repeat_times_format">%1$d fois</string>
+    <string name="story_duration_format">Histoire de %1$d minutes</string>
+    <string name="story_sample_text">Dans une petite maison douillette nichée dans une ville animée, vivait un jeune couple attendant avec impatience l\'arrivée de leur premier bébé...</string>
+    <string name="text_bullet_separator"> • </string>
+    <string name="time_minutes_format">%1$d minutes</string>
+    <string name="toast_alarm_triggered">Alarme déclenchée ! L\'application se fermera dans 3 secondes</string>
+    <string name="toast_download_progress">Téléchargement déjà en cours...</string>
+    <string name="toast_download_starting">%1$s a commencé le téléchargement...</string>
+    <string name="toast_download_success">✅ %1$s téléchargé avec succès !</string>
+    <string name="toast_no_email_app">Aucune application de courrier trouvée. Veuillez envoyer vos commentaires à : %1$s</string>
+    <string name="toast_timer_cancelled">Minuterie arrêtée</string>
+    <string name="toast_timer_failed">Échec de réglage de la minuterie</string>
+    <string name="toast_timer_past_time">L\'heure sélectionnée est dans le passé !</string>
+    <string name="toast_timer_permission_denied">Permission refusée pour les alarmes exactes</string>
+    <string name="toast_timer_select_valid_time">Veuillez sélectionner une heure valide</string>
+    <string name="toast_timer_audio_paused">Audio mis en pause par la minuterie</string>
+    <string name="toast_story_ended">Histoire terminée</string>
+
+    <!-- ===== FONCTIONNALITÉS ÉCRAN PREMIUM ===== -->
+    <string name="premium_feature_access_content">Accès aux contenus premium</string>
+    <string name="premium_feature_new_content">Nouveau contenu chaque mois</string>
+    <string name="premium_feature_ad_free">Expérience sans publicité</string>
+
+    <!-- ===== CARTES DE TARIFICATION PREMIUM ===== -->
+    <string name="premium_pricing_monthly">Mensuel</string>
+    <string name="premium_pricing_cancel_anytime">Annulez à tout moment</string>
+    <string name="premium_pricing_yearly">Annuel</string>
+    <string name="premium_pricing_yearly_price">$17.88/Année</string>
+    <string name="premium_pricing_save_badge">Économisez 25%</string>
+    <string name="premium_pricing_lifetime">À vie</string>
+    <string name="premium_pricing_lifetime_subtitle">Achetez une fois, gardez pour toujours.</string>
+</resources>

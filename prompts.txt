@@ -1,0 +1,111 @@
+
+Prompt 1 : 
+Akhon je problem hocche kuno strory running thakle seta pause kor e app close kore tarpor notification o close kore tarpor app reopen korle tarpor sei same
+story play korte gele story ta ager obosthan theke resume hoy, amar eta dorkar nei. tumi ja imaplement korba seta holo ei obosthay audio reume er dorkar nei first theke run hobe.
+kunovabe exoplayer hoyto musicstate ta dhore rkhe seta close er shomoy dhore rakahar dorkar nei . kajta analyse kore project analyse kore bolo kivabe korba.
+eta fix korar shomoy mone rakhbe music story pause kore app close korle notification jeno close na hoy. notification kebol matro user intentionaly close korlei close hobe tao seta story paused obosthay thakle
+
+
+2.
+Akhon je problem face kortesi , App music runninng -> close app and Notification -> reopen the app - runn music -> pause music -> close app :
+tokhon notification o close hoye jacche . eta hocche tokhoni shudhu jokhon music pause kore close kori tokhon. music play thakele eta hoy na.
+deeply analyse kore solving plan bolo.
+
+3. Ekta issue solve kora lagbe amader. app running-> play music-> Close app -> click on the notification -> opens the homepage only. akhon amar lagbe
+NaptuneNavigation.kt file thaka MiniAudioControllerContainer show kora lagbe . bortoman obosthay hocche na.
+
+4. app running-> play music-> Close app -> close notification -> Splashscreen -> Homescreen . but in Homsecreen in this condition not showing the
+last audio with minibar MiniAudioControllerContainer visibale. Here what I need in homescreen unless user stopeed the audio before closing we should show the
+MiniAudioControllerContainer with the last running audio, it should be in a state that playing it will start from the 0 position, means a new run not remsume .
+Can you do it keeping the previous fixes intact? let me know the plan.
+
+5. I need the Splashscreen.kt to be shown only the first time user opens the app. Rest of time should not .
+
+6. What I need now is , if a story is completed playing and than user press to play it again , completely reload
+it by clearing all mediasession and audiostate and any other things to needed to clear to do a fresh start.
+
+7. What I need now is , if a story is completed playing(See Audioplayerscreen and other all audio playing related things) than play the next story from the list.
+ if there is no story in next in the list than no need to do anything, make sure the all things work perfecty perfect that all state remain perfect, user click on
+ the prev and next should work perfectly in this situation. analyse the project based on this and let me know tour plan.
+
+ # https://appswave.xyz/naptune/ahare_jibon.mp3
+
+
+ TIMER
+ 8. when timer triggers dont need to wait 3 seconds, action immidiately. For all kind of timers dont kill the process and dont terminate the app ,
+ for timers other than end of story just pause the story and lullaby, for the timer option "end of story" when timer triggers
+ just got to next story and just dont play it . keep it here. if the story is the last story of the list do not need to do anything
+ becuase my programme already handles it to stop there. analyse the project and let me know if you can do this implementation properly and let me know yopur plan.
+ and write it down in a md file so anyone or any ai can read it to complete the task.
+
+ fix  on timer :::
+
+ Can you check if end of story clikc is implemented correctly
+ ,because it shows the toas "Slected time is in the past" and
+  the time icon doesnt change to fill icon. and after the story
+  ends the next story starts playing, I need is go to next
+ story but dont play it, user can clikc on the polay icoon to
+ play it, anaylisng let me know where is the problem and how
+ will u fix to plan
+
+
+ ### FOR Firebender
+
+ nice, worked good , in the condition of "end of story" ,
+ when it completes when we are on the next story , the time icon should be changed to the "ic_timer"
+ not the fill icon. for the last story if "end of story" is selected you just need to reset the icon to "ic_timer"
+ icon and nothing else. and the stop timer option on the slideuptimer modal list should not be seen becuase no timer is
+ active on that state. analyse it deeply and implement .
+
+ **
+ Your change made unwanted functionalities , so I reverted to previous commit. Now what I need you to do is,
+ curreenlty when we are in the last story and from timermodal we select "end of story" than when the story ends
+ the timer dosent resets and timer icon dosent change from fill to normal icon. I need you to find where the problem is and
+  let me know how can you solve this. FYI: stories other than last story , when "end of story " selected than end of story the
+  timer resets and app goes auto to next story and dont play it. this functionality is okay,
+  u dont need to do anything with this and dont spoil this functionality to coreect what i said for the last story of the list
+
+
+ ** Now look and deeply analyse the timer function on SlideUpTimerModal on Audioplayerscreennew Screen , how does it work for lullaby item and and for story item.
+ then I will give you a task to do .
+
+ **
+ Now for Manual navigation to new story/lullaby(playing new manually)
+ dont reset the timer for both of them, only for "End of story" reset the
+ timer in this case of manual navigation. Tell me what you understand and tell me can you do it ?
+
+ ** Now I need One thing is , when running a story or lullaby if I pause or stop it either from the app or either from the notification or either the audio item
+ stopped or paused by the timer, and then close the app and close the notification also means completely stop the app and come back to app the app should show the MiniAudioControllerContainer used in
+ Naptunenavigation with appropriate story or lullaby. then if user choose to play it we should use forceLoadNewAudio used in audioplayerviewmodel
+ to start it. Let me know by analysing the project deeply if you can do it correctly without cvreating a new bug. First by analysing let me know your plan.
+
+ ** Works fine, but while user try to play the audio dont need to resume the audio, just play it from the beginning using forceLoadNewAudio method used in audioplayerviewmodel. and
+ clicking on the play icon of the minicontroller should play the audio not open the audioplayerscreennew , when the play icon is clicked while the audio is loading the
+ loadingindicator should show on the minicontroller and clicking on the minicontroller should not play the audio just open the audioplayerscreen new.
+
+ **
+ Now read the Mainscreen.kt file . Here I need a 724CF9 colored layer blur glowing effect of 200dp circle size just at the beginning of Popular lullaby section, it should be on the
+  behind layer of popular lullaby section  . it should be situated like it should stsrt from 20% above of popular lullaby section. can you do that for me.
+
+
+**  cAN YOU DO OONE THING IN THE , how the popular story and popular lullaby is arranged here by samlely after the popular story section ends , implement a section of
+Favourites with , that will have title and all button like popular lullaby/story .
+conditiopns are below.
+1. if there is no favourites items in the database, dont sho9w this section at all.
+2. if there is any item show this section.
+3. Max items should be four
+4. items should be mix of lullaby and story
+5. if there is only one lullaby and one story show the lullaby first and show the story.
+6. if there is more than one lullaby than show the first 2 lullabies in side by side as the section of lullaby,
+7. if there is one lullaby and and more story than show the lullaby first and show the stories as top to down.
+
+remember max items should be 4 only. lullabies should be shown 2 items in one row and story should show top to down as like popular story section
+
+1. Now on the mainscreen what I need is when the data is in loading condition it shows circular progress indicator. I want you to make this
+screen like when the data is in loading condition instead of loading indicator show the exact layout as the data loaded but with
+empty data and the basic structure of lullabyitem and storyitem with a very slight shimmer effect. in the place of text of lullayname and story name also show a shimmer effect.
+dont show anything shimmer loading for favourite section at first , if theres data for favourite than just directly show it. so here I need the shimmer effect for todays pick, popular lullaby and popular story section ,
+ with exact straucture of orginal data. you can get the padding and spacing and the size of text and the size of lullabyitem and storyitem by analyseing them , use this sizes
+
+
+ ** Now see how banner ad is implemented at the top of the lullabyscreen and storyscreen , apply same banner test ad to to bottom of the profilescreen .

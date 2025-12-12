@@ -1,0 +1,39 @@
+package com.naptune.lullabyandstory.utils
+
+
+import android.os.Bundle
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.ktx.logEvent
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class AnalyticsHelper @Inject constructor(
+    private val analytics: FirebaseAnalytics
+) {
+
+    fun logEvent(name: String, params: Map<String, Any?> = emptyMap()) {
+        val bundle = Bundle()
+
+        params.forEach { (key, value) ->
+            when (value) {
+                is String -> bundle.putString(key, value)
+                is Int -> bundle.putInt(key, value)
+                is Long -> bundle.putLong(key, value)
+                is Double -> bundle.putDouble(key, value)
+                is Float -> bundle.putFloat(key, value)
+            }
+        }
+        analytics.logEvent(name, bundle)
+    }
+
+    fun logScreen(screenName: String) {
+        logEvent(
+            FirebaseAnalytics.Event.SCREEN_VIEW,
+            mapOf(
+                FirebaseAnalytics.Param.SCREEN_NAME to screenName,
+                FirebaseAnalytics.Param.SCREEN_CLASS to "MainActivity"
+            )
+        )
+    }
+}
