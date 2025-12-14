@@ -422,7 +422,7 @@ fun getReactiveLullabies(): Flow<List<LullabyDomainModel>> {
 | ---------------------------------------- | ----------------------------------------- |
 | `LullabyLocalEntity`                     | Lullaby metadata and paths                |
 | `StoryLocalEntity`                       | Story content and audio paths             |
-| `TranslationLocalEntity`                 | Multi-language translations (7 languages) |
+| `TranslationLocalEntity`                 | Multi-language translations (6 languages) |
 | `StoryNameTranslationLocalEntity`        | Story name translations                   |
 | `StoryDescriptionTranslationLocalEntity` | Story description translations            |
 | `StoryAudioLanguageLocalEntity`          | Language-specific audio paths             |
