@@ -54,7 +54,7 @@ class StoryRemoteDataSourceImpl @Inject constructor(
                  Result.success(models)
 
              } catch (e: Exception) {
-                 Log.e("StoryRemoteDataSourceImpl", "💥 Error fetching stories: ${e.message}")
+                 Log.e("StoryLocalDataSourceImpl", "💥 Error fetching stories: ${e.message}")
                  // ✅ Return failure result
                  Result.failure(e)
              }
@@ -70,7 +70,7 @@ class StoryRemoteDataSourceImpl @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 Log.d(
-                    "StoryRemoteDataSourceImpl",
+                    "StoryLocalDataSourceImpl",
                     "🎵 Fetching story audio languages from Appwrite..."
                 )
 
@@ -96,14 +96,14 @@ class StoryRemoteDataSourceImpl @Inject constructor(
                 }
 
                 Log.d(
-                    "StoryRemoteDataSourceImpl",
+                    "StoryLocalDataSourceImpl",
                     "🎵 Successfully fetched ${storyAudioLanguageList} story audio language records"
                 )
                 Result.success(storyAudioLanguageList)
 
             } catch (e: Exception) {
                 Log.e(
-                    "StoryRemoteDataSourceImpl",
+                    "StoryLocalDataSourceImpl",
                     "💥 Error fetching story audio languages: ${e.message}"
                 )
                 Result.failure(e)

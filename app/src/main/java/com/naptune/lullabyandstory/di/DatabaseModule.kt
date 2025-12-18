@@ -12,7 +12,7 @@ import com.naptune.lullabyandstory.data.local.dao.StoryDao
 import com.naptune.lullabyandstory.data.local.dao.StoryAudioLanguageDao
 import com.naptune.lullabyandstory.data.local.dao.StoryDescriptionTranslationDao
 import com.naptune.lullabyandstory.data.local.dao.StoryNameTranslationDao
-import com.naptune.lullabyandstory.data.local.dao.TranslationDao
+import com.naptune.lullabyandstory.data.local.dao.LullabyTranslationDao
 import com.naptune.lullabyandstory.data.local.database.AppDatabase
 import com.naptune.lullabyandstory.data.datastore.AppPreferences
 import dagger.Module
@@ -66,7 +66,7 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideTranslationDao(database: AppDatabase): TranslationDao {
+    fun provideTranslationDao(database: AppDatabase): LullabyTranslationDao {
         return database.translationDao()
     }
 
@@ -84,10 +84,10 @@ object DatabaseModule {
         storyAudioLanguageDao: StoryAudioLanguageDao,
         storyDescriptionTranslationDao: StoryDescriptionTranslationDao,
         storyNameTranslationDao: StoryNameTranslationDao,
-        translationDao: TranslationDao,
+        translationDao: LullabyTranslationDao,
         favouriteMetadataDao: FavouriteMetadataDao
-    ): LocalDataSourceImpl {
-        return LocalDataSourceImpl(lullabyDao, storyDao, storyAudioLanguageDao, storyDescriptionTranslationDao, storyNameTranslationDao, translationDao, favouriteMetadataDao)
+    ): LullabyLocalDataSourceImpl {
+        return LullabyLocalDataSourceImpl(lullabyDao, storyDao, storyAudioLanguageDao, storyDescriptionTranslationDao, storyNameTranslationDao, translationDao, favouriteMetadataDao)
     }
 */
 

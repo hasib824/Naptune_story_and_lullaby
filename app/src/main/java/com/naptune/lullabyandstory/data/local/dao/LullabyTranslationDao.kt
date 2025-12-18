@@ -13,7 +13,7 @@ import com.naptune.lullabyandstory.data.local.entity.TranslationLocalEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface TranslationDao {
+interface LullabyTranslationDao {
 
     @Query("SELECT * FROM translation_table")
     fun getAllTranslations(): Flow<List<TranslationLocalEntity>>

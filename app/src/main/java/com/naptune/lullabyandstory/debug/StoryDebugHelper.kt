@@ -10,7 +10,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.naptune.lullabyandstory.data.datastore.AppPreferences
-import com.naptune.lullabyandstory.data.local.source.LocalDataSourceImpl
+import com.naptune.lullabyandstory.data.local.source.lullaby.LullabyLocalDataSourceImpl
+import com.naptune.lullabyandstory.data.local.source.story.StoryLocalDataSource
 import com.naptune.lullabyandstory.data.network.source.story.StoryRemoteDataSourceImpl
 import com.naptune.lullabyandstory.domain.usecase.story.FetchStoriesUsecase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,7 +24,8 @@ import javax.inject.Inject
 @HiltViewModel
 class StoryDebugViewModel @Inject constructor(
     private val storyRemoteDataSourceImpl: StoryRemoteDataSourceImpl,
-    private val localDataSourceImpl: LocalDataSourceImpl,
+    private val localDataSourceImpl: LullabyLocalDataSourceImpl,
+    private val localStoryDataSourceImpl: StoryLocalDataSource,
     private val appPreferences: AppPreferences,
     private val fetchStoriesUsecase: FetchStoriesUsecase
 ) : ViewModel() {
@@ -44,7 +46,7 @@ class StoryDebugViewModel @Inject constructor(
                     Log.d("StoryDebug", "📅 Current time: ${System.currentTimeMillis()}")
 
                     // Step 2: Check local database count
-                    val localCount = localDataSourceImpl.getStoriesCount()
+                    val localCount = localStoryDataSourceImpl.getStoriesCount()
                     Log.d("StoryDebug", "💾 Local story count: $localCount")
                 }
 
@@ -68,7 +70,7 @@ class StoryDebugViewModel @Inject constructor(
                 // ✅ Step 4: Check local stories (on IO thread)
                 withContext(Dispatchers.IO) {
                     Log.d("StoryDebug", "💾 Checking local stories...")
-                    val localStories = localDataSourceImpl.getAllStories().first()
+                    val localStories = localStoryDataSourceImpl.getAllStories().first()
                     Log.d("StoryDebug", "💾 Local stories count: ${localStories.size}")
                     localStories.forEachIndexed { index, story ->
                         Log.d("StoryDebug", "  $index. ${story.storyName} (ID: ${story.documentId})")
@@ -103,7 +105,7 @@ class StoryDebugViewModel @Inject constructor(
                 // ✅ All database operations on IO thread
                 withContext(Dispatchers.IO) {
                     // Clear local data
-                    localDataSourceImpl.deleteAllStories()
+                    localStoryDataSourceImpl.deleteAllStories()
                     
                     // Reset sync time
                     appPreferences.resetSyncTime(isFromStory = true)
@@ -133,8 +135,8 @@ class StoryDebugViewModel @Inject constructor(
                         // ✅ Database operations on IO thread
                         withContext(Dispatchers.IO) {
                             // Clear and insert
-                            localDataSourceImpl.deleteAllStories()
-                            localDataSourceImpl.insertAllStories(stories.map { remote ->
+                            localStoryDataSourceImpl.deleteAllStories()
+                            localStoryDataSourceImpl.insertAllStories(stories.map { remote ->
                                 // Convert remote to local entity
                                 com.naptune.lullabyandstory.data.local.entity.StoryLocalEntity(
                                     documentId = remote.documentId,

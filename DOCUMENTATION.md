@@ -105,7 +105,7 @@ app/src/main/java/com/naptune/lullabyandstory/
 |   |   +-- dao/                       # Room DAOs
 |   |   +-- database/AppDatabase.kt    # Room database (version 6)
 |   |   +-- entity/                    # Database entities
-|   |   +-- LocalDataSource.kt         # Local data operations
+|   |   +-- LullabyLocalDataSource.kt         # Local data operations
 |   |
 |   +-- manager/
 |   |   +-- SessionUnlockManager.kt    # Rewarded ad unlock tracking

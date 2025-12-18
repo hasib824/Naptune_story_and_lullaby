@@ -12,7 +12,7 @@ import com.naptune.lullabyandstory.domain.manager.LanguageStateManager
 import com.naptune.lullabyandstory.domain.model.LullabyDomainModel
 import com.naptune.lullabyandstory.domain.repository.LullabyRepository
 import com.naptune.lullabyandstory.data.datastore.AppPreferences
-import com.naptune.lullabyandstory.data.local.source.LocalDataSource
+import com.naptune.lullabyandstory.data.local.source.lullaby.LullabyLocalDataSource
 import com.naptune.lullabyandstory.data.network.source.lullaby.LullabyRemoteDataSource
 import com.naptune.lullabyandstory.data.network.prdownloader.PRDownloadManager
 import com.naptune.lullabyandstory.domain.data.DownloadLullabyResult
@@ -31,7 +31,7 @@ import javax.inject.Singleton
 @Singleton
 class LullabyRepositoryImpl @Inject constructor(
     private val lullabyRemoteDataSourceImpl: LullabyRemoteDataSource,
-    private val localDataSourceImpl: LocalDataSource,
+    private val lullabyLocalDataSourceImpl: LullabyLocalDataSource,
     private val prDownloadManager: PRDownloadManager,
     private val appPreferences: AppPreferences,
     private val languageStateManager: LanguageStateManager,
@@ -46,7 +46,7 @@ class LullabyRepositoryImpl @Inject constructor(
             try {
                 // Step 1: Check if sync is needed
                 val syncNeeded = appPreferences.isSyncNeeded(false)
-                val localCount = localDataSourceImpl.getLullabyCount()
+                val localCount = lullabyLocalDataSourceImpl.getLullabyCount()
                 
                 Log.d("LullabyRepositoryImpl", "🔄 Sync needed: $syncNeeded, Local count: $localCount")
                 
@@ -90,8 +90,8 @@ class LullabyRepositoryImpl @Inject constructor(
 
                             // 🚀 PARALLEL DATABASE INSERTS: Execute both inserts concurrently
                             val insertJobs = listOf(
-                                async { localDataSourceImpl.insertAllLullabies(lullabyEntities) },
-                                async { localDataSourceImpl.insertAllTranslations(translationEntities) }
+                                async { lullabyLocalDataSourceImpl.insertAllLullabies(lullabyEntities) },
+                                async { lullabyLocalDataSourceImpl.insertAllTranslations(translationEntities) }
                             )
 
 
@@ -142,7 +142,7 @@ class LullabyRepositoryImpl @Inject constructor(
         return languageStateManager.currentLanguage.flatMapLatest { currentLanguage ->
             Log.d("LullabyRepositoryImpl", "🚀 ULTRA OPTIMIZED: Getting reactive lullabies for language: $currentLanguage")
 
-            localDataSourceImpl.getAllLullabiesWithLocalizedNames(currentLanguage)
+            lullabyLocalDataSourceImpl.getAllLullabiesWithLocalizedNames(currentLanguage)
                 .map { lullabiesWithLocalizedNames ->
                     Log.d("LullabyRepositoryImpl", "🔄 ULTRA OPTIMIZED: Database returned ${lullabiesWithLocalizedNames.size} items for language: $currentLanguage")
 
@@ -189,8 +189,8 @@ class LullabyRepositoryImpl @Inject constructor(
 
             if (downloadResult is DownloadLullabyResult.Completed) {
                 Log.d("RoomUpdate", "✅ Entry : ${downloadResult}")
-                val rowsUpdated = localDataSourceImpl.markAsDownloaded(lullabyItem.documentId)
-                localDataSourceImpl.updateLocalPath(downloadResult.muusciLocalPath, downloadResult.documentId)
+                val rowsUpdated = lullabyLocalDataSourceImpl.markAsDownloaded(lullabyItem.documentId)
+                lullabyLocalDataSourceImpl.updateLocalPath(downloadResult.muusciLocalPath, downloadResult.documentId)
             }
             downloadResult
         }
@@ -207,20 +207,20 @@ class LullabyRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getLullabyById(documentId: String): LullabyDomainModel? {
-        return localDataSourceImpl.getLullabyById(documentId)?.toDomainModel()
+        return lullabyLocalDataSourceImpl.getLullabyById(documentId)?.toDomainModel()
     }
 
 
     override suspend fun refreshLullabies(): Result<List<LullabyDomainModel>> {
         return try {
             // Clear local cache
-            localDataSourceImpl.deleteAllLullabies()
+            lullabyLocalDataSourceImpl.deleteAllLullabies()
 
             // Fetch fresh data from remote
 
             return lullabyRemoteDataSourceImpl.fetchLullabyData()
                 .onSuccess { remoteLullabies ->
-                    localDataSourceImpl.insertAllLullabies(remoteLullabies.toEntityList())
+                    lullabyLocalDataSourceImpl.insertAllLullabies(remoteLullabies.toEntityList())
                 }
                 .map { remoteLullabies ->
                     remoteLullabies.toDomainModelList()
@@ -232,14 +232,14 @@ class LullabyRepositoryImpl @Inject constructor(
     }
 
     override fun searchLullabies(query: String): Flow<List<LullabyDomainModel>> {
-        return localDataSourceImpl.searchLullabies(query).map { entityList ->
+        return lullabyLocalDataSourceImpl.searchLullabies(query).map { entityList ->
             entityList.localToDomainModelList()
         }
     }
 
     override suspend fun saveLullaby(lullaby: LullabyDomainModel): Result<Unit> {
         return try {
-            localDataSourceImpl.insertLullaby(lullaby.toEntity())
+            lullabyLocalDataSourceImpl.insertLullaby(lullaby.toEntity())
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -248,7 +248,7 @@ class LullabyRepositoryImpl @Inject constructor(
 
     override suspend fun deleteLullaby(lullaby: LullabyDomainModel): Result<Unit> {
         return try {
-            localDataSourceImpl.deleteLullaby(lullaby.toEntity())
+            lullabyLocalDataSourceImpl.deleteLullaby(lullaby.toEntity())
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -261,23 +261,23 @@ class LullabyRepositoryImpl @Inject constructor(
             Log.d("LullabyRepositoryImpl", "❤️ Toggling lullaby favourite for ID: $lullabyId")
 
             // Check current favourite status BEFORE toggling
-            val lullaby = localDataSourceImpl.getLullabyById(lullabyId)
+            val lullaby = lullabyLocalDataSourceImpl.getLullabyById(lullabyId)
             val wasAlreadyFavourite = lullaby?.isFavourite ?: false
 
             Log.d("LullabyRepositoryImpl", "📊 Current favourite status: $wasAlreadyFavourite")
 
             // Toggle the favourite boolean in lullaby table
-            localDataSourceImpl.toggleLullabyFavourite(lullabyId)
+            lullabyLocalDataSourceImpl.toggleLullabyFavourite(lullabyId)
 
             // Update metadata for LIFO ordering
             if (wasAlreadyFavourite) {
                 // Was favourite, now unfavouriting -> DELETE metadata
                 Log.d("LullabyRepositoryImpl", "💔 Removing from favourites, deleting metadata")
-                localDataSourceImpl.deleteFavouriteMetadata(lullabyId, "lullaby")
+                lullabyLocalDataSourceImpl.deleteFavouriteMetadata(lullabyId, "lullaby")
             } else {
                 // Was not favourite, now favouriting -> INSERT metadata
                 Log.d("LullabyRepositoryImpl", "❤️ Adding to favourites, inserting metadata")
-                localDataSourceImpl.insertFavouriteMetadata(lullabyId, "lullaby")
+                lullabyLocalDataSourceImpl.insertFavouriteMetadata(lullabyId, "lullaby")
             }
 
             Log.d("LullabyRepositoryImpl", "✅ Lullaby favourite toggled successfully with LIFO metadata")
@@ -289,7 +289,7 @@ class LullabyRepositoryImpl @Inject constructor(
 
     override fun checkIfLullabyIsFavourite(lullabyId: String): Flow<Boolean> {
         Log.d("LullabyRepositoryImpl", "🔍 Checking if lullaby is favourite for ID: $lullabyId")
-        return localDataSourceImpl.isLullabyFavourite(lullabyId)
+        return lullabyLocalDataSourceImpl.isLullabyFavourite(lullabyId)
     }
     
     // ✅ UPDATED: Language-aware favourite lullabies
@@ -300,7 +300,7 @@ class LullabyRepositoryImpl @Inject constructor(
         return languageStateManager.currentLanguage.flatMapLatest { currentLanguage ->
             Log.d("LullabyRepositoryImpl", "🔄 Getting favourite lullabies for language: $currentLanguage")
 
-            localDataSourceImpl.getFavouriteLullabiesWithLocalizedNames(currentLanguage)
+            lullabyLocalDataSourceImpl.getFavouriteLullabiesWithLocalizedNames(currentLanguage)
                 .map { favouriteLullabiesWithLocalizedNames ->
                     Log.d("LullabyRepositoryImpl", "❤️ Favourite lullabies updated: ${favouriteLullabiesWithLocalizedNames.size} items")
 
@@ -339,11 +339,11 @@ class LullabyRepositoryImpl @Inject constructor(
 
     }
 
-    // ✅ NEW: Translation-related methods via LocalDataSourceImpl
+    // ✅ NEW: Translation-related methods via LullabyLocalDataSourceImpl
     override suspend fun getTranslationByLullabyDocumentId(lullabyDocumentId: String): com.naptune.lullabyandstory.domain.model.TranslationDomainModel? {
         return try {
             Log.d("LullabyRepositoryImpl", "🔍 Getting translation for lullaby document ID: $lullabyDocumentId")
-            val translationEntity = localDataSourceImpl.getTranslationByLullabyDocumentId(lullabyDocumentId)
+            val translationEntity = lullabyLocalDataSourceImpl.getTranslationByLullabyDocumentId(lullabyDocumentId)
             translationEntity?.let { entity ->
                 entity.toDomainModel()
             }
@@ -356,7 +356,7 @@ class LullabyRepositoryImpl @Inject constructor(
     override suspend fun getLullabyWithTranslation(documentId: String): com.naptune.lullabyandstory.data.local.dao.LullabyWithTranslation? {
         return try {
             Log.d("LullabyRepositoryImpl", "🔗 Getting lullaby with translation for ID: $documentId")
-            localDataSourceImpl.getLullabyWithTranslation(documentId)
+            lullabyLocalDataSourceImpl.getLullabyWithTranslation(documentId)
         } catch (e: Exception) {
             Log.e("LullabyRepositoryImpl", "❌ Error getting lullaby with translation: ${e.message}")
             null
@@ -372,7 +372,7 @@ class LullabyRepositoryImpl @Inject constructor(
             Log.d("LullabyRepositoryImpl", "🔄 Database-optimized query for language: $currentLanguage")
 
             // Get pre-computed localized names from database
-            localDataSourceImpl.getAllLullabiesWithLocalizedNames(currentLanguage)
+            lullabyLocalDataSourceImpl.getAllLullabiesWithLocalizedNames(currentLanguage)
                 .map { lullabiesWithLocalizedNames ->
                     lullabiesWithLocalizedNames.map { lullabyWithLocalizedName ->
                         val lullaby = lullabyWithLocalizedName.lullaby
@@ -401,7 +401,7 @@ class LullabyRepositoryImpl @Inject constructor(
 
     override suspend fun getTranslationCount(): Int {
         return try {
-            val count = localDataSourceImpl.getTranslationCount()
+            val count = lullabyLocalDataSourceImpl.getTranslationCount()
             Log.d("LullabyRepositoryImpl", "📊 Translation count: $count")
             count
         } catch (e: Exception) {

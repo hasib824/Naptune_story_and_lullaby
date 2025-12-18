@@ -8,7 +8,7 @@ import com.naptune.lullabyandstory.data.local.dao.StoryDao
 import com.naptune.lullabyandstory.data.local.dao.StoryAudioLanguageDao
 import com.naptune.lullabyandstory.data.local.dao.StoryDescriptionTranslationDao
 import com.naptune.lullabyandstory.data.local.dao.StoryNameTranslationDao
-import com.naptune.lullabyandstory.data.local.dao.TranslationDao
+import com.naptune.lullabyandstory.data.local.dao.LullabyTranslationDao
 import com.naptune.lullabyandstory.data.local.entity.FavouriteMetadataEntity
 import com.naptune.lullabyandstory.data.local.entity.LullabyLocalEntity
 import com.naptune.lullabyandstory.data.local.entity.StoryLocalEntity
@@ -36,7 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun storyAudioLanguageDao(): StoryAudioLanguageDao
     abstract fun storyDescriptionTranslationDao(): StoryDescriptionTranslationDao
     abstract fun storyNameTranslationDao(): StoryNameTranslationDao
-    abstract fun translationDao(): TranslationDao
+    abstract fun translationDao(): LullabyTranslationDao
     abstract fun favouriteMetadataDao(): FavouriteMetadataDao
 
 }

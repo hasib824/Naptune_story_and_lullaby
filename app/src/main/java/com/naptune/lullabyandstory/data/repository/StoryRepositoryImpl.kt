@@ -3,7 +3,9 @@ package com.naptune.lullabyandstory.data.repository
 import android.content.Context
 import android.util.Log
 import com.naptune.lullabyandstory.data.datastore.AppPreferences
-import com.naptune.lullabyandstory.data.local.source.LocalDataSourceImpl
+import com.naptune.lullabyandstory.data.local.source.lullaby.LullabyLocalDataSource
+import com.naptune.lullabyandstory.data.local.source.lullaby.LullabyLocalDataSourceImpl
+import com.naptune.lullabyandstory.data.local.source.story.StoryLocalDataSource
 import com.naptune.lullabyandstory.domain.manager.LanguageStateManager
 import com.naptune.lullabyandstory.data.mapper.remoteToLocalModelList
 import com.naptune.lullabyandstory.data.mapper.toStoryDescriptionTranslationEntityList
@@ -34,10 +36,10 @@ import javax.inject.Singleton
 @Singleton
 class StoryRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val storyLocalDataSourceImpl: StoryLocalDataSource,
     private val storyRemoteDataSourceImpl: StoryRemoteDataSource,
     private val storyNameTranslationRemoteDataSource: StoryNameTranslationRemoteDataSource,
     private val storyDescriptionTranslationRemoteDataSource: StoryDescriptionTranslationRemoteDataSource,
-    private val localDataSourceImpl: LocalDataSourceImpl,
     private val prDownloadManager: PRDownloadManager,
     private val appPreference: AppPreferences,
     private val languageStateManager: LanguageStateManager
@@ -56,7 +58,7 @@ class StoryRepositoryImpl @Inject constructor(
                     appPreference.isSyncNeeded(isFromStory = true)
                 }
                 val localCount = withContext(Dispatchers.IO) {
-                    localDataSourceImpl.getStoriesCount()
+                    storyLocalDataSourceImpl.getStoriesCount()
                 }
 
                 Log.d("StoryRepositoryImpl", "🔄 Story sync needed: $syncNeeded, Local count: $localCount")
@@ -118,21 +120,21 @@ class StoryRepositoryImpl @Inject constructor(
                                 val insertJobs = mutableListOf<Deferred<Any>>()
 
                                 // Always insert stories
-                                insertJobs.add(async { localDataSourceImpl.insertAllStories(storyEntities) })
+                                insertJobs.add(async { storyLocalDataSourceImpl.insertAllStories(storyEntities) })
 
                                 // Insert name translations if available
                                 nameTranslationEntities?.let { entities ->
-                                    insertJobs.add(async { localDataSourceImpl.insertAllStoryNameTranslations(entities) })
+                                    insertJobs.add(async { storyLocalDataSourceImpl.insertAllStoryNameTranslations(entities) })
                                 }
 
                                 // Insert description translations if available
                                 descriptionTranslationEntities?.let { entities ->
-                                    insertJobs.add(async { localDataSourceImpl.insertAllStoryDescriptionTranslations(entities) })
+                                    insertJobs.add(async { storyLocalDataSourceImpl.insertAllStoryDescriptionTranslations(entities) })
                                 }
 
                                 // Insert audio languages if available
                                 audioLanguageEntities?.let { entities ->
-                                    insertJobs.add(async { localDataSourceImpl.insertAllStoryAudioLanguages(entities) })
+                                    insertJobs.add(async { storyLocalDataSourceImpl.insertAllStoryAudioLanguages(entities) })
                                 }
                                 // Wait for all database operations to complete
                                 insertJobs.awaitAll()
@@ -194,120 +196,6 @@ class StoryRepositoryImpl @Inject constructor(
         }.flowOn(Dispatchers.IO) // ✅ Ensure entire flow runs on IO thread
     }
 
-
-    /* override suspend fun fetchStories(): Flow<List<StoryDomainModel>> {
-         Log.d("StoryRepositoryImpl", "🚀 Starting story sync process...")
-
-         return flow {
-             try {
-                 // ✅ Step 1: Check if sync is needed (wrap in withContext)
-                 val syncNeeded = withContext(Dispatchers.IO) {
-                     appPreference.isSyncNeeded(isFromStory = true)
-                 }
-                 val localCount = withContext(Dispatchers.IO) {
-                     localDataSourceImpl.getStoriesCount()
-                 }
-
-                 Log.d("StoryRepositoryImpl", "🔄 Story sync needed: $syncNeeded, Local count: $localCount")
-
-                 // ✅ Step 2: If we need fresh data (first time or 24+ hours passed)
-                 if (syncNeeded || localCount == 0) {
-                     Log.d("StoryRepositoryImpl", "🌐 Fetching stories from remote...")
-
-                     try {
-                         // ✅ Remote fetch is already on IO thread
-                         val remoteResult = storyRemoteDataSourceImpl.fetchStoryData()
-
-                         remoteResult.onSuccess { remoteStories ->
-                             Log.d("StoryRepositoryImpl", "✅ Remote story sync successful: ${remoteStories.size} items")
-
-                             // 🚀 REVOLUTIONARY: Fetch BOTH story name AND description translations
-                             try {
-                                 // Create mapping for foreign key relationships
-                                 val storyIdToDocumentMap = remoteStories.associate { it.id to it.documentId }
-
-                                 // ✅ Fetch story name translations
-                                 val nameTranslationsResult = storyNameTranslationRemoteDataSource.fetchStoryNameTranslations()
-
-                                 // ✅ Fetch story description translations
-                                 val descriptionTranslationsResult = storyDescriptionTranslationRemoteDataSource.fetchStoryDescriptionTranslations()
-
-                                 // Process both translation results
-                                 nameTranslationsResult.onSuccess { remoteStoryNameTranslations ->
-                                     Log.d("StoryRepositoryImpl", "✅ Story name translations fetched: ${remoteStoryNameTranslations.size} items")
-
-                                     descriptionTranslationsResult.onSuccess { remoteStoryDescriptionTranslations ->
-                                         Log.d("StoryRepositoryImpl", "✅ Story description translations fetched: ${remoteStoryDescriptionTranslations.size} items")
-
-                                         // ✅ Database operations - Insert stories + BOTH translations
-                                         localDataSourceImpl.insertAllStories(remoteStories.remoteToLocalModelList())
-                                         localDataSourceImpl.insertAllStoryNameTranslations(
-                                             remoteStoryNameTranslations.toStoryNameTranslationEntityList(storyIdToDocumentMap)
-                                         )
-                                         localDataSourceImpl.insertAllStoryDescriptionTranslations(
-                                             remoteStoryDescriptionTranslations.toStoryDescriptionTranslationEntityList(storyIdToDocumentMap)
-                                         )
-
-                                         Log.d("StoryRepositoryImpl", "🎉 REVOLUTIONARY: Story data with FULL translations cached successfully!")
-                                     }.onFailure { descError ->
-                                         Log.w("StoryRepositoryImpl", "⚠️ Story description translations fetch failed: ${descError.message}")
-                                         // Still insert stories + name translations
-                                         localDataSourceImpl.insertAllStories(remoteStories.remoteToLocalModelList())
-                                         localDataSourceImpl.insertAllStoryNameTranslations(
-                                             remoteStoryNameTranslations.toStoryNameTranslationEntityList(storyIdToDocumentMap)
-                                         )
-                                         Log.d("StoryRepositoryImpl", "🎉 Story data and name translations cached successfully!")
-                                     }
-                                 }.onFailure { nameError ->
-                                     Log.w("StoryRepositoryImpl", "⚠️ Story name translations fetch failed: ${nameError.message}")
-
-                                     // Try description translations only
-                                     descriptionTranslationsResult.onSuccess { remoteStoryDescriptionTranslations ->
-                                         Log.d("StoryRepositoryImpl", "✅ Story description translations fetched: ${remoteStoryDescriptionTranslations.size} items")
-
-                                         localDataSourceImpl.insertAllStories(remoteStories.remoteToLocalModelList())
-                                         localDataSourceImpl.insertAllStoryDescriptionTranslations(
-                                             remoteStoryDescriptionTranslations.toStoryDescriptionTranslationEntityList(storyIdToDocumentMap)
-                                         )
-                                         Log.d("StoryRepositoryImpl", "🎉 Story data and description translations cached successfully!")
-                                     }.onFailure { descError ->
-                                         Log.w("StoryRepositoryImpl", "⚠️ Both translations failed, continuing with stories only")
-                                         // Just insert stories
-                                         localDataSourceImpl.insertAllStories(remoteStories.remoteToLocalModelList())
-                                         Log.d("StoryRepositoryImpl", "🎉 Story data cached successfully (without translations)!")
-                                     }
-                                 }
-                             } catch (e: Exception) {
-                                 Log.w("StoryRepositoryImpl", "⚠️ Exception fetching story translations: ${e.message}")
-                                 // Fallback: just insert stories
-                                 localDataSourceImpl.insertAllStories(remoteStories.remoteToLocalModelList())
-                                 Log.d("StoryRepositoryImpl", "🎉 Story data cached successfully (without translations)!")
-                             }
-
-                             // Update sync timestamp AFTER successful sync
-                             appPreference.updateLastSyncTime(isFromStory = true)
-                         }.onFailure { error ->
-                             Log.e("StoryRepositoryImpl", "❌ Remote story sync failed: ${error.message}")
-                             // Continue to emit local data below
-                         }
-                     } catch (e: Exception) {
-                         Log.e("StoryRepositoryImpl", "💥 Exception during remote story sync: ${e.message}")
-                         // Continue to emit local data below
-                     }
-                 }
-
-                 // ✅ Step 3: Always emit the reactive local data stream
-                 Log.d("StoryRepositoryImpl", "🔄 Starting reactive story data stream...")
-                 emitAll(getReactiveStories())
-
-             } catch (e: Exception) {
-                 Log.e("StoryRepositoryImpl", "💥 Critical error in story sync: ${e.message}")
-                 // Fallback to just local data
-                 emitAll(getReactiveStories())
-             }
-         }.flowOn(Dispatchers.IO) // ✅ Ensure entire flow runs on IO thread
-     }*/
-
     /**
      * 🚀 REVOLUTIONARY: Database-level FULL localization reactive flow
      * BOTH name + description pre-computed at database level - O(1) performance
@@ -316,7 +204,7 @@ class StoryRepositoryImpl @Inject constructor(
         return languageStateManager.currentLanguage.flatMapLatest { currentLanguage ->
             Log.d("StoryRepositoryImpl", "🚀 REVOLUTIONARY: Getting reactive stories with FULL localization for language: $currentLanguage")
 
-            localDataSourceImpl.getAllStoriesWithFullLocalization(currentLanguage)
+            storyLocalDataSourceImpl.getAllStoriesWithFullLocalization(currentLanguage)
                 .map { storiesWithFullLocalization ->
                     Log.d("StoryRepositoryImpl", "🔄 REVOLUTIONARY: Database returned ${storiesWithFullLocalization.size} items with FULL localization for language: $currentLanguage")
 
@@ -361,23 +249,23 @@ class StoryRepositoryImpl @Inject constructor(
                 Log.d("StoryRepositoryImpl", "❤️ Toggling story favourite for ID: $documentid")
 
                 // Check current favourite status BEFORE toggling
-                val wasAlreadyFavourite = localDataSourceImpl.checkIfItemIsFavourite(documentid)
+                val wasAlreadyFavourite = storyLocalDataSourceImpl.checkIfItemIsFavourite(documentid)
                     .first()
 
                 Log.d("StoryRepositoryImpl", "📊 Current favourite status: $wasAlreadyFavourite")
 
                 // Toggle the favourite boolean in story table
-                localDataSourceImpl.toggleStoryFavourite(documentid)
+                storyLocalDataSourceImpl.toggleStoryFavourite(documentid)
 
                 // Update metadata for LIFO ordering
                 if (wasAlreadyFavourite) {
                     // Was favourite, now unfavouriting -> DELETE metadata
                     Log.d("StoryRepositoryImpl", "💔 Removing from favourites, deleting metadata")
-                    localDataSourceImpl.deleteFavouriteMetadata(documentid, "story")
+                    storyLocalDataSourceImpl.deleteFavouriteMetadata(documentid, "story")
                 } else {
                     // Was not favourite, now favouriting -> INSERT metadata
                     Log.d("StoryRepositoryImpl", "❤️ Adding to favourites, inserting metadata")
-                    localDataSourceImpl.insertFavouriteMetadata(documentid, "story")
+                    storyLocalDataSourceImpl.insertFavouriteMetadata(documentid, "story")
                 }
 
                 Log.d("StoryRepositoryImpl", "✅ Story favourite toggled successfully with LIFO metadata")
@@ -389,7 +277,7 @@ class StoryRepositoryImpl @Inject constructor(
 
     override suspend fun checkIfItemIsFavourite(documentid: String): Flow<Boolean> {
         Log.d("StoryRepositoryImpl", "🔍 Checking if story is favourite for ID: $documentid")
-        return localDataSourceImpl.checkIfItemIsFavourite(documentid)
+        return storyLocalDataSourceImpl.checkIfItemIsFavourite(documentid)
             .flowOn(Dispatchers.IO)
     }
     
@@ -400,7 +288,7 @@ class StoryRepositoryImpl @Inject constructor(
 
             Log.d("StoryRepositoryImpl", "❤️ REVOLUTIONARY: Getting favourite stories with FULL localization for language: $currentLanguage")
 
-            localDataSourceImpl.getFavouriteStoriesWithFullLocalization(currentLanguage)
+            storyLocalDataSourceImpl.getFavouriteStoriesWithFullLocalization(currentLanguage)
                 .map { storiesWithFullLocalization ->
                     Log.d("StoryRepositoryImpl", "❤️ REVOLUTIONARY: Database returned ${storiesWithFullLocalization.size} favourite items with FULL localization for language: $currentLanguage")
 
