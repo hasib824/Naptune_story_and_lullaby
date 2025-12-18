@@ -1,4 +1,4 @@
-package com.naptune.lullabyandstory.data.network.appwrite
+package com.naptune.lullabyandstory.data.network.source.lullaby
 
 import android.util.Log
 import com.naptune.lullabyandstory.data.appwrite.AppwriteBaseClient
@@ -11,13 +11,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class LullabyRemoteDataSource @Inject constructor(private val appwriteBaseClient: AppwriteBaseClient) {
+class LullabyRemoteDataSourceImpl @Inject constructor(private val appwriteBaseClient: AppwriteBaseClient) :
+    LullabyRemoteDataSource {
 
-    private val databaseId = "671e1589003e4219336b"
+     private val databaseId = "671e1589003e4219336b"
     private val collectionId = "671e159b000a0bd19137"
 
 
-    fun getIntegerFromDocument(document: Document<Map<String, Any>>, columnName: String): Int {
+    override fun getIntegerFromDocument(document: Document<Map<String, Any>>, columnName: String): Int {
         return try {
             when (val value = document.data[columnName]) {
                 is Int -> { Log.e("AppwriteInt","int"); value }
@@ -31,12 +32,12 @@ class LullabyRemoteDataSource @Inject constructor(private val appwriteBaseClient
         }
     }
 
-    suspend fun fetchLullabyData(): Result<List<LullabyRemoteModel>> {
+    override suspend fun fetchLullabyData(): Result<List<LullabyRemoteModel>> {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d("LullabyRemoteDataSource", "🌐 Starting API call...")
-                Log.d("LullabyRemoteDataSource", "🔗 Database ID: $databaseId")
-                Log.d("LullabyRemoteDataSource", "🔗 Collection ID: $collectionId")
+                Log.d("LullabyRemoteDataSourceImpl", "🌐 Starting API call...")
+                Log.d("LullabyRemoteDataSourceImpl", "🔗 Database ID: $databaseId")
+                Log.d("LullabyRemoteDataSourceImpl", "🔗 Collection ID: $collectionId")
 
                 val result = appwriteBaseClient.databases.listDocuments(
                     databaseId = databaseId,
@@ -56,23 +57,21 @@ class LullabyRemoteDataSource @Inject constructor(private val appwriteBaseClient
                         musicSize = document.data["music_size"]?.toString() ?: "",
                         imagePath = document.data["image_path"]?.toString() ?: "",
                         musicLength = document.data["music_length"]?.toString() ?: "",
-                       // popularity_count = document.data["popularity_count"] as? Int ?: 0,
+                        // popularity_count = document.data["popularity_count"] as? Int ?: 0,
                         popularity_count = document.data["popularity_count"] as? Long ?: 0L,
-                        isFree =  (document.data["is_free"] as? Boolean) ?: false
+                        isFree = (document.data["is_free"] as? Boolean) ?: false
                     )
                 }
 
                 val documents = result.documents
-                
-                Log.d("LullabyRemoteDataSource", "✅ API Response received")
-                Log.d("LullabyRemoteDataSource", "📄 Total documents: ${documents.size}")
-                Log.d("LullabyRemoteDataSource", "🎵 Mapped lullabies: ${lullabyList.size}")
 
-             //   fetchTranslationData()
+                Log.d("LullabyRemoteDataSourceImpl", "✅ API Response received")
+                Log.d("LullabyRemoteDataSourceImpl", "📄 Total documents: ${documents.size}")
+                Log.d("LullabyRemoteDataSourceImpl", "🎵 Mapped lullabies: ${lullabyList.size}")
+
+                //   fetchTranslationData()
 
                 Result.success(lullabyList)
-
-
 
 
             } catch (e: Exception) {
@@ -82,7 +81,7 @@ class LullabyRemoteDataSource @Inject constructor(private val appwriteBaseClient
         }
     }
 
-    suspend fun fetchTranslationData(): Result<List<TranslationRemoteModel>> {
+    override suspend fun fetchTranslationData(): Result<List<TranslationRemoteModel>> {
         return withContext(Dispatchers.IO) {
             try {
                 Log.d("TranslationRemoteDataSource", "🌐 Fetching translation data...")

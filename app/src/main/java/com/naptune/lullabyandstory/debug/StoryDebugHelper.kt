@@ -10,8 +10,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.naptune.lullabyandstory.data.datastore.AppPreferences
-import com.naptune.lullabyandstory.data.local.LocalDataSource
-import com.naptune.lullabyandstory.data.network.appwrite.StoryRemoteDataSource
+import com.naptune.lullabyandstory.data.local.source.LocalDataSourceImpl
+import com.naptune.lullabyandstory.data.network.source.story.StoryRemoteDataSourceImpl
 import com.naptune.lullabyandstory.domain.usecase.story.FetchStoriesUsecase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -22,8 +22,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class StoryDebugViewModel @Inject constructor(
-    private val storyRemoteDataSource: StoryRemoteDataSource,
-    private val localDataSource: LocalDataSource,
+    private val storyRemoteDataSourceImpl: StoryRemoteDataSourceImpl,
+    private val localDataSourceImpl: LocalDataSourceImpl,
     private val appPreferences: AppPreferences,
     private val fetchStoriesUsecase: FetchStoriesUsecase
 ) : ViewModel() {
@@ -44,13 +44,13 @@ class StoryDebugViewModel @Inject constructor(
                     Log.d("StoryDebug", "📅 Current time: ${System.currentTimeMillis()}")
 
                     // Step 2: Check local database count
-                    val localCount = localDataSource.getStoriesCount()
+                    val localCount = localDataSourceImpl.getStoriesCount()
                     Log.d("StoryDebug", "💾 Local story count: $localCount")
                 }
 
                 // Step 3: Test remote data source directly
                 Log.d("StoryDebug", "🌐 Testing remote data source...")
-                val remoteResult = storyRemoteDataSource.fetchStoryData()
+                val remoteResult = storyRemoteDataSourceImpl.fetchStoryData()
                 remoteResult.fold(
                     onSuccess = { stories ->
                         Log.d("StoryDebug", "✅ Remote fetch successful: ${stories.size} stories")
@@ -68,7 +68,7 @@ class StoryDebugViewModel @Inject constructor(
                 // ✅ Step 4: Check local stories (on IO thread)
                 withContext(Dispatchers.IO) {
                     Log.d("StoryDebug", "💾 Checking local stories...")
-                    val localStories = localDataSource.getAllStories().first()
+                    val localStories = localDataSourceImpl.getAllStories().first()
                     Log.d("StoryDebug", "💾 Local stories count: ${localStories.size}")
                     localStories.forEachIndexed { index, story ->
                         Log.d("StoryDebug", "  $index. ${story.storyName} (ID: ${story.documentId})")
@@ -103,7 +103,7 @@ class StoryDebugViewModel @Inject constructor(
                 // ✅ All database operations on IO thread
                 withContext(Dispatchers.IO) {
                     // Clear local data
-                    localDataSource.deleteAllStories()
+                    localDataSourceImpl.deleteAllStories()
                     
                     // Reset sync time
                     appPreferences.resetSyncTime(isFromStory = true)
@@ -125,7 +125,7 @@ class StoryDebugViewModel @Inject constructor(
             try {
                 Log.d("StoryDebug", "🚀 Force syncing from remote...")
                 
-                val result = storyRemoteDataSource.fetchStoryData()
+                val result = storyRemoteDataSourceImpl.fetchStoryData()
                 result.fold(
                     onSuccess = { stories ->
                         Log.d("StoryDebug", "✅ Force sync successful: ${stories.size} stories")
@@ -133,8 +133,8 @@ class StoryDebugViewModel @Inject constructor(
                         // ✅ Database operations on IO thread
                         withContext(Dispatchers.IO) {
                             // Clear and insert
-                            localDataSource.deleteAllStories()
-                            localDataSource.insertAllStories(stories.map { remote ->
+                            localDataSourceImpl.deleteAllStories()
+                            localDataSourceImpl.insertAllStories(stories.map { remote ->
                                 // Convert remote to local entity
                                 com.naptune.lullabyandstory.data.local.entity.StoryLocalEntity(
                                     documentId = remote.documentId,

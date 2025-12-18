@@ -290,8 +290,8 @@ override suspend fun syncLullabiesFromRemote(): Flow<List<LullabyDomainModel>> {
     return flow {
         if (appPreferences.isSyncNeeded(false) || localDataSource.getLullabyCount() == 0) {
             coroutineScope {
-                val lullabiesDeferred = async { lullabyRemoteDataSource.fetchLullabyData() }
-                val translationsDeferred = async { lullabyRemoteDataSource.fetchTranslationData() }
+                val lullabiesDeferred = async { lullabyRemoteDataSourceImpl.fetchLullabyData() }
+                val translationsDeferred = async { lullabyRemoteDataSourceImpl.fetchTranslationData() }
                 // Parallel insert after both complete
             }
         }

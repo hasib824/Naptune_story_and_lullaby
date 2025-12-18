@@ -6,7 +6,6 @@ package com.naptune.lullabyandstory.di
 
 import android.content.Context
 import androidx.room.Room
-import com.naptune.lullabyandstory.data.local.LocalDataSource
 import com.naptune.lullabyandstory.data.local.dao.FavouriteMetadataDao
 import com.naptune.lullabyandstory.data.local.dao.LullabyDao
 import com.naptune.lullabyandstory.data.local.dao.StoryDao
@@ -76,6 +75,7 @@ object DatabaseModule {
         return database.favouriteMetadataDao()
     }
 
+/*
     @Provides
     @Singleton
     fun provideLocalDataSource(
@@ -86,9 +86,10 @@ object DatabaseModule {
         storyNameTranslationDao: StoryNameTranslationDao,
         translationDao: TranslationDao,
         favouriteMetadataDao: FavouriteMetadataDao
-    ): LocalDataSource {
-        return LocalDataSource(lullabyDao, storyDao, storyAudioLanguageDao, storyDescriptionTranslationDao, storyNameTranslationDao, translationDao, favouriteMetadataDao)
+    ): LocalDataSourceImpl {
+        return LocalDataSourceImpl(lullabyDao, storyDao, storyAudioLanguageDao, storyDescriptionTranslationDao, storyNameTranslationDao, translationDao, favouriteMetadataDao)
     }
+*/
 
     @Provides
     @Singleton
