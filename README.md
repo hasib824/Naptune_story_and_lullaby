@@ -20,7 +20,7 @@
 
 ## Overview
 
-**Naptune** is a production-ready Android application that helps children fall asleep with soothing lullabies and bedtime stories. **Lullabies can be downloaded for offline playback**, while **stories are streamed online** for the best experience. Built with modern Android development practices, this project demonstrates expertise in Clean Architecture, MVI pattern, and comprehensive feature implementation including offline support, multi-language localization, and monetization.
+**Naptune** is a production-ready Android application that helps children fall asleep with soothing lullabies and bedtime stories. **Lullabies can be downloaded for offline playback**, while **stories are streamed online** for the best experience. Built with modern Android development practices following **SOLID principles**, this project demonstrates expertise in Clean Architecture, MVI pattern, and comprehensive feature implementation including offline support, multi-language localization, and monetization.
 
 ---
 
@@ -205,6 +205,74 @@ app/src/main/java/com/naptune/lullabyandstory/
 
 ---
 
+---
+
+## SOLID Principles Implementation
+
+This project demonstrates practical application of SOLID principles throughout the codebase:
+
+### Single Responsibility Principle (SRP)
+Each class has one clear responsibility:
+- **Repositories**: Only handle data operations (fetching, storing)
+- **UseCases**: Only contain business logic
+- **ViewModels**: Only manage UI state
+- **DataSources**: Only interact with specific data sources (API, Database, Preferences)
+
+```kotlin
+// Example: Each class has one job
+class LullabyRepository          // Data operations only
+class GetLullabiesUseCase        // Business logic only  
+class LullabyViewModel           // UI state management only
+```
+
+### Open/Closed Principle (OCP)
+Code is open for extension but closed for modification through interfaces:
+```kotlin
+interface LullabyRepository {
+    fun getLullabies(): Flow<List<Lullaby>>
+}
+
+// Can extend without modifying existing code
+class LullabyRepositoryImpl : LullabyRepository
+class OfflineLullabyRepository : LullabyRepository
+```
+
+### Liskov Substitution Principle (LSP)
+All implementations can replace their abstractions without breaking functionality:
+```kotlin
+// Any UseCase implementation works with the same interface
+interface UseCase<Input, Output> {
+    suspend operator fun invoke(input: Input): Output
+}
+```
+
+### Interface Segregation Principle (ISP)
+Interfaces are focused and clients don't depend on methods they don't use:
+```kotlin
+// Separate, focused interfaces
+interface LullabyRepository { /* lullaby operations */ }
+interface StoryRepository { /* story operations */ }
+interface FavouriteRepository { /* favourite operations */ }
+```
+
+### Dependency Inversion Principle (DIP)
+High-level modules depend on abstractions, not concrete implementations:
+```kotlin
+@HiltViewModel
+class LullabyViewModel @Inject constructor(
+    private val getLullabiesUseCase: GetLullabiesUseCase  // Depends on abstraction
+) : ViewModel()
+
+// Hilt provides the concrete implementation
+@Module
+abstract class RepositoryModule {
+    @Binds
+    abstract fun bindLullabyRepository(
+        impl: LullabyRepositoryImpl
+    ): LullabyRepository  // Returns interface, not implementation
+}
+```
+
 ## Features
 
 ### Core Features
@@ -354,7 +422,7 @@ fun getReactiveLullabies(): Flow<List<LullabyDomainModel>> {
 | ---------------------------------------- | ----------------------------------------- |
 | `LullabyLocalEntity`                     | Lullaby metadata and paths                |
 | `StoryLocalEntity`                       | Story content and audio paths             |
-| `TranslationLocalEntity`                 | Multi-language translations (7 languages) |
+| `TranslationLocalEntity`                 | Multi-language translations (6 languages) |
 | `StoryNameTranslationLocalEntity`        | Story name translations                   |
 | `StoryDescriptionTranslationLocalEntity` | Story description translations            |
 | `StoryAudioLanguageLocalEntity`          | Language-specific audio paths             |
@@ -394,12 +462,12 @@ fun getReactiveLullabies(): Flow<List<LullabyDomainModel>> {
 
 2. **Configure Firebase**
 
-   - Add your `google-services.json` to the `app/` directory
-   - Enable Firebase Cloud Messaging
+    - Add your `google-services.json` to the `app/` directory
+    - Enable Firebase Cloud Messaging
 
 3. **Configure Appwrite**
 
-   - Update endpoint and project ID in `AppwriteBaseClient.kt`
+    - Update endpoint and project ID in `AppwriteBaseClient.kt`
 
 4. **Build and Run**
    ```bash
