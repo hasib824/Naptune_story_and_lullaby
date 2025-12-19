@@ -12,18 +12,11 @@ import com.naptune.lullabyandstory.presentation.player.service.MusicController
 import com.naptune.lullabyandstory.utils.InternetConnectionManager
 import android.app.Activity
 import android.widget.Toast
-import com.naptune.lullabyandstory.domain.usecase.admob.InitializeAdMobUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.LoadBannerAdUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.DestroyBannerAdUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.LoadRewardedAdUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.ShowRewardedAdUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.CheckRewardedAdAvailabilityUseCase
-import com.naptune.lullabyandstory.domain.model.BannerAdDomainModel
-import com.naptune.lullabyandstory.domain.model.RewardedAdLoadResult
-import com.naptune.lullabyandstory.domain.model.RewardedAdShowResult
-import com.naptune.lullabyandstory.domain.model.AdLoadResult
 import android.util.Log
+import com.naptune.lullabyandstory.data.manager.AdManager
 import com.naptune.lullabyandstory.data.network.admob.AdMobDataSource
+import com.naptune.lullabyandstory.domain.model.AdSizeType
+import com.naptune.lullabyandstory.domain.model.ContentInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,29 +30,31 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 
+/**
+ * ViewModel for Favourite screen.
+ * REFACTORED: Now follows Single Responsibility Principle (SRP).
+ * Ad management logic delegated to unified AdManager.
+ *
+ * Responsibilities:
+ * - Favourite lullabies and stories data management
+ * - Toggle favourite status
+ * - Music playback coordination
+ *
+ * Ad management delegated to: AdManager (shared across all ViewModels)
+ */
 @HiltViewModel
 class FavouriteViewModel @Inject constructor(
     private val getFavouriteLullabiesUseCase: GetFavouriteLullabiesUseCase,
     private val getFavouriteStoriesUseCase: GetFavouriteStoriesUseCase,
     private val toggleLullabyFavouriteUseCase: ToggleLullabyFavouriteUseCase,
     private val toggleStoryFavouriteUseCase: ToogleStoryFavouriteUseCase,
-    // ✅ NEW: Inject MusicController to track playing state
     private val musicController: MusicController,
-    // ✅ NEW: Inject InternetConnectionManager for network monitoring
     private val internetConnectionManager: InternetConnectionManager,
-    // AdMob use cases
-    private val initializeAdMobUseCase: InitializeAdMobUseCase,
-    private val loadBannerAdUseCase: LoadBannerAdUseCase,
-    private val destroyBannerAdUseCase: DestroyBannerAdUseCase,
-    // Rewarded Ad use cases
-    private val loadRewardedAdUseCase: LoadRewardedAdUseCase,
-    private val showRewardedAdUseCase: ShowRewardedAdUseCase,
-    private val checkRewardedAdAvailabilityUseCase: CheckRewardedAdAvailabilityUseCase,
-    // ✅ NEW: Session unlock manager for rewarded ad unlocks
+    // ✅ SRP FIX: Single unified ad manager instead of 6 ad use cases
+    private val adManager: AdManager,
+    // ✅ Session unlock manager for UI state observation
     private val sessionUnlockManager: com.naptune.lullabyandstory.data.manager.SessionUnlockManager,
-    // ✅ Firebase Analytics helper
     private val analyticsHelper: com.naptune.lullabyandstory.utils.analytics.AnalyticsHelper,
-    // ✅ Billing - Premium status
     private val billingManager: com.naptune.lullabyandstory.data.billing.BillingManager
 ) : ViewModel() {
 
@@ -80,26 +75,36 @@ class FavouriteViewModel @Inject constructor(
         )
     }
 
-    // ✅ NEW: Combine base state with session unlock manager
+    // ✅ MVI FIX: Combine base state + session unlocks + ad state into single state
     val uiState: StateFlow<FavouriteUiState> = combine(
         _uiState,
-        sessionUnlockManager.unlockedItems
-    ) { baseState, unlockedIds ->
-        Log.d("FavouriteViewModel", "🔄 State combine triggered - UnlockedIds: $unlockedIds")
+        sessionUnlockManager.unlockedItems,
+        adManager.adState  // ✅ Get ad state from manager
+    ) { baseState, unlockedIds, adState ->
+        Log.d("FavouriteViewModel", "🔄 State combine - UnlockedIds: $unlockedIds")
+
         if (baseState is FavouriteUiState.Content) {
-            val newState = baseState.copy(adUnlockedIds = unlockedIds)
-            Log.d("FavouriteViewModel", "✅ Updated Content state with ${unlockedIds.size} unlocked items")
+            val newState = baseState.copy(
+                adUnlockedIds = unlockedIds,
+                adState = adState  // ✅ Use ad state from manager
+            )
+            Log.d("FavouriteViewModel", "✅ Updated state: ${unlockedIds.size} unlocked")
             newState
         } else {
             baseState
         }
     }.onStart {
-        initializeAds()
-        if (internetConnectionManager.isCurrentlyConnected()) {
-            // ✅ Preload rewarded ad for story/lullaby unlock on start
-            Log.d("FavouriteViewModel", "🎁 Preloading rewarded ad on start")
-            loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)
-        }
+        // ✅ SRP FIX: Delegate ad initialization to manager
+        adManager.initializeAds()
+        adManager.loadBannerAd(
+            adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
+            adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER,
+            placement = "favourite_screen"
+        )
+
+        // Preload rewarded ad for content unlock
+        adManager.loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)
+
         loadFavourites()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FavouriteUiState.isLoading)
 
@@ -300,476 +305,40 @@ class FavouriteViewModel @Inject constructor(
     
     // AdMob functionality
     private fun initializeAds() {
-        Log.d("FavouriteViewModel", "🎯 Initializing AdMob...")
-        viewModelScope.launch {
-            try {
-                initializeAdMobUseCase()
-                Log.d("FavouriteViewModel", "✅ AdMob initialized successfully")
-
-                // Update UI state to reflect initialization
-                val currentState = _uiState.value as? FavouriteUiState.Content
-                if (currentState != null) {
-                    _uiState.value = currentState.copy(isAdInitialized = true)
-                }
-            } catch (e: Exception) {
-                Log.e("FavouriteViewModel", "❌ AdMob initialization failed: ${e.message}", e)
-            }
-        }
+        adManager.initializeAds()
     }
     
     private fun loadBannerAd(adUnitId: String, adSizeType: com.naptune.lullabyandstory.domain.model.AdSizeType) {
-        // 🏆 Skip ad loading for premium users
-        if (isPurchased.value) {
-            Log.d("FavouriteViewModel", "🏆 Premium user - Skipping banner ad load")
-            return
-        }
-
-        Log.d("FavouriteViewModel", "🎯 Loading banner ad: $adUnitId")
-        viewModelScope.launch {
-            try {
-                loadBannerAdUseCase(adUnitId, adSizeType).collect { result ->
-                    val currentState = _uiState.value as? FavouriteUiState.Content
-                    if (currentState != null) {
-                        when (result) {
-                            is AdLoadResult.Loading -> {
-                                Log.d("FavouriteViewModel", "⏳ Banner ad loading...")
-                                val defaultHeight = when (adSizeType) {
-                                    com.naptune.lullabyandstory.domain.model.AdSizeType.ANCHORED_ADAPTIVE_BANNER -> 90
-                                    com.naptune.lullabyandstory.domain.model.AdSizeType.LARGE_BANNER -> 100
-                                    else -> 50
-                                }
-                                
-                                val loadingAd = currentState.adState.bannerAd?.copy(isLoading = true, error = null)
-                                    ?: com.naptune.lullabyandstory.domain.model.BannerAdDomainModel(
-                                        adUnitId = adUnitId,
-                                        adSize = com.naptune.lullabyandstory.domain.model.AdSize(
-                                            width = -1,
-                                            height = defaultHeight,
-                                            type = adSizeType
-                                        ),
-                                        isLoading = true
-                                    )
-                                _uiState.value = currentState.copy(
-                                    adState = currentState.adState.copy(bannerAd = loadingAd)
-                                )
-                            }
-                            is AdLoadResult.Success -> {
-                                Log.d("FavouriteViewModel", "✅ Banner ad loaded successfully")
-                                _uiState.value = currentState.copy(
-                                    adState = currentState.adState.copy(bannerAd = result.bannerAd)
-                                )
-                            }
-                            is AdLoadResult.Error -> {
-                                Log.e("FavouriteViewModel", "❌ Banner ad load failed: ${result.message}")
-                                val defaultHeight = when (adSizeType) {
-                                    com.naptune.lullabyandstory.domain.model.AdSizeType.ANCHORED_ADAPTIVE_BANNER -> 90
-                                    com.naptune.lullabyandstory.domain.model.AdSizeType.LARGE_BANNER -> 100
-                                    else -> 50
-                                }
-                                
-                                val errorAd = currentState.adState.bannerAd?.copy(
-                                    isLoading = false,
-                                    isLoaded = false,
-                                    error = result.message
-                                ) ?: com.naptune.lullabyandstory.domain.model.BannerAdDomainModel(
-                                    adUnitId = adUnitId,
-                                    adSize = com.naptune.lullabyandstory.domain.model.AdSize(
-                                        width = -1,
-                                        height = defaultHeight,
-                                        type = adSizeType
-                                    ),
-                                    isLoading = false,
-                                    isLoaded = false,
-                                    error = result.message
-                                )
-                                _uiState.value = currentState.copy(
-                                    adState = currentState.adState.copy(bannerAd = errorAd)
-                                )
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("FavouriteViewModel", "❌ Banner ad loading failed: ${e.message}", e)
-                
-                // Update UI with error state
-                val currentState = _uiState.value as? FavouriteUiState.Content
-                if (currentState != null) {
-                    val defaultHeight = when (adSizeType) {
-                        com.naptune.lullabyandstory.domain.model.AdSizeType.ANCHORED_ADAPTIVE_BANNER -> 90
-                        com.naptune.lullabyandstory.domain.model.AdSizeType.LARGE_BANNER -> 100
-                        else -> 50
-                    }
-                    
-                    val errorAd = BannerAdDomainModel(
-                        adUnitId = adUnitId,
-                        adSize = com.naptune.lullabyandstory.domain.model.AdSize(
-                            width = -1,
-                            height = defaultHeight,
-                            type = adSizeType
-                        ),
-                        isLoaded = false,
-                        isLoading = false,
-                        error = e.message ?: "Unknown error"
-                    )
-                    _uiState.value = currentState.copy(
-                        adState = currentState.adState.copy(bannerAd = errorAd)
-                    )
-                }
-            }
-        }
+        adManager.loadBannerAd(adUnitId, adSizeType, placement = "favourite_screen")
     }
     
     private fun destroyBannerAd(adUnitId: String) {
-        Log.d("FavouriteViewModel", "🎯 Destroying banner ad: $adUnitId")
-        viewModelScope.launch {
-            try {
-                destroyBannerAdUseCase(adUnitId)
-                Log.d("FavouriteViewModel", "✅ Banner ad destroyed successfully")
-                
-                // Clear ad from UI state
-                val currentState = _uiState.value as? FavouriteUiState.Content
-                if (currentState != null) {
-                    _uiState.value = currentState.copy(
-                        adState = currentState.adState.copy(bannerAd = null)
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("FavouriteViewModel", "❌ Banner ad destruction failed: ${e.message}", e)
-            }
-        }
+        adManager.destroyBannerAd(adUnitId)
     }
     
     // Rewarded ad methods
     private fun loadRewardedAd(adUnitId: String) {
-        // 🏆 Skip ad loading for premium users
-        if (isPurchased.value) {
-            Log.d("FavouriteViewModel", "🏆 Premium user - Skipping rewarded ad load")
-            return
-        }
-
-        Log.d("FavouriteViewModel", "🎬 Loading rewarded ad - Unit: $adUnitId")
-
-        viewModelScope.launch {
-            try {
-                val startTime = System.currentTimeMillis()
-                val currentState = _uiState.value as? FavouriteUiState.Content ?: return@launch
-                _uiState.value = currentState.copy(
-                    adState = currentState.adState.copy(
-                        isLoadingRewardedAd = true,
-                        rewardedAdError = null
-                    )
-                )
-
-                loadRewardedAdUseCase(adUnitId).collect { result ->
-                    val state = _uiState.value as? FavouriteUiState.Content ?: return@collect
-                    when (result) {
-                        is RewardedAdLoadResult.Loading -> {
-                            Log.d("FavouriteViewModel", "⏳ Rewarded ad loading...")
-                            _uiState.value = state.copy(
-                                adState = state.adState.copy(
-                                    isLoadingRewardedAd = true,
-                                    rewardedAdError = null
-                                )
-                            )
-                        }
-                        is RewardedAdLoadResult.Success -> {
-                            Log.d("FavouriteViewModel", "✅ Rewarded ad loaded successfully")
-
-                            // ✅ Analytics: Track ad loaded
-                            val loadTime = System.currentTimeMillis() - startTime
-                            analyticsHelper.logRewardedAdLoaded(adUnitId, loadTime)
-
-                            _uiState.value = state.copy(
-                                adState = state.adState.copy(
-                                    rewardedAd = result.rewardedAd,
-                                    isLoadingRewardedAd = false,
-                                    rewardedAdError = null
-                                )
-                            )
-                        }
-                        is RewardedAdLoadResult.Error -> {
-                            Log.e("FavouriteViewModel", "❌ Rewarded ad load failed: ${result.message}")
-
-                            // ✅ Analytics: Track ad load failed
-                            val networkType = if (internetConnectionManager.isCurrentlyConnected()) "connected" else "disconnected"
-                            analyticsHelper.logRewardedAdLoadFailed(
-                                adUnitId = adUnitId,
-                                errorCode = "load_error",
-                                errorMessage = result.message,
-                                networkType = networkType
-                            )
-
-                            _uiState.value = state.copy(
-                                adState = state.adState.copy(
-                                    isLoadingRewardedAd = false,
-                                    rewardedAdError = result.message
-                                )
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("FavouriteViewModel", "💥 Rewarded ad loading exception: ${e.message}", e)
-                val currentState = _uiState.value as? FavouriteUiState.Content
-                if (currentState != null) {
-                    _uiState.value = currentState.copy(
-                        adState = currentState.adState.copy(
-                            isLoadingRewardedAd = false,
-                            rewardedAdError = "Failed to load ad: ${e.message}"
-                        )
-                    )
-                }
-            }
-        }
+        adManager.loadRewardedAd(adUnitId)
     }
 
     private fun showRewardedAdForStory(adUnitId: String, activity: Activity, story: StoryDomainModel) {
-        Log.d("FavouriteViewModel", "🎬 Showing rewarded ad for story: ${story.storyName}")
-
-        // ✅ Analytics: Track ad requested
-        analyticsHelper.logRewardedAdRequested(
-            contentType = "story",
-            contentId = story.documentId,
-            contentName = story.storyName,
-            isPremium = !story.isFree,
-            sourceScreen = "favourites",
-            adUnitId = adUnitId
+        // ✅ SRP FIX: Delegate to AdManager with ContentInfo
+        adManager.showRewardedAd(
+            adUnitId = adUnitId,
+            activity = activity,
+            content = ContentInfo.fromStory(story),
+            sourceScreen = "favourite_screen"
         )
-
-        // ✅ Check if ad is available
-        if (!checkRewardedAdAvailabilityUseCase(adUnitId)) {
-            Log.w("FavouriteViewModel", "❌ Rewarded ad not available, loading new ad...")
-            loadRewardedAd(adUnitId)
-            Toast.makeText(activity, "Loading ad, please try again in a moment", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val adStartTime = System.currentTimeMillis()
-        viewModelScope.launch {
-            try {
-                showRewardedAdUseCase(adUnitId, activity).collect { result ->
-                    when (result) {
-                        is RewardedAdShowResult.Loading -> {
-                            Log.d("FavouriteViewModel", "⏳ Rewarded ad loading for story: ${story.storyName}")
-
-                            // ✅ Analytics: Track ad started
-                            analyticsHelper.logRewardedAdStarted(adUnitId, story.documentId)
-                        }
-                        is RewardedAdShowResult.Success -> {
-                            Log.d("FavouriteViewModel", "🎉 Reward earned for story: ${story.storyName} - ${result.reward.amount} ${result.reward.type}")
-                            Log.d("FavouriteViewModel", "📋 Story documentId: ${story.documentId}")
-
-                            val watchDuration = ((System.currentTimeMillis() - adStartTime) / 1000).toInt()
-
-                            // ✅ Analytics: Track ad completed
-                            analyticsHelper.logRewardedAdCompleted(
-                                adUnitId = adUnitId,
-                                contentType = "story",
-                                contentId = story.documentId,
-                                contentName = story.storyName,
-                                rewardAmount = result.reward.amount,
-                                rewardType = result.reward.type,
-                                watchDurationSeconds = watchDuration
-                            )
-
-                            // ✅ NEW: Unlock story for current session via SessionUnlockManager
-                            sessionUnlockManager.unlockItem(
-                                itemId = story.documentId,
-                                itemType = com.naptune.lullabyandstory.data.manager.UnlockType.Story
-                            )
-
-                            // ✅ Analytics: Track content unlocked via ad
-                            analyticsHelper.logContentUnlockedViaAd(
-                                contentType = "story",
-                                contentId = story.documentId,
-                                contentName = story.storyName,
-                                category = "story",
-                                sessionUnlockCount = sessionUnlockManager.getUnlockCount(),
-                                timeSpentBeforeUnlock = (System.currentTimeMillis() - adStartTime) / 1000
-                            )
-
-                            // ✅ Analytics: Track session unlock used
-                            analyticsHelper.logSessionUnlockUsed(
-                                contentType = "story",
-                                contentId = story.documentId,
-                                contentName = story.storyName,
-                                minutesSinceUnlock = 0L // Just unlocked
-                            )
-
-                            // ✅ Debug: Verify unlock
-                            val isNowUnlocked = sessionUnlockManager.isItemUnlocked(story.documentId)
-                            Log.d("FavouriteViewModel", "🔓 Story unlock verified: $isNowUnlocked")
-                            Log.d("FavouriteViewModel", "📊 Total unlocked items: ${sessionUnlockManager.getUnlockCount()}")
-
-                            // Show success toast
-                            Toast.makeText(
-                                activity,
-                                "🎁 ${story.storyName} unlocked for this session!",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                            // ✅ Preload next rewarded ad
-                            loadRewardedAd(adUnitId)
-                        }
-                        is RewardedAdShowResult.Dismissed -> {
-                            Log.d("FavouriteViewModel", "📱 Rewarded ad dismissed for story: ${story.storyName} - ${result.reason}")
-
-                            // ✅ Analytics: Track ad closed early (if not completed)
-                            if (result.reason != "completed") {
-                                val watchedSeconds = ((System.currentTimeMillis() - adStartTime) / 1000).toInt()
-                                analyticsHelper.logRewardedAdClosedEarly(
-                                    adUnitId = adUnitId,
-                                    contentId = story.documentId,
-                                    watchedSeconds = watchedSeconds,
-                                    requiredSeconds = 30 // Typical rewarded ad duration
-                                )
-                            }
-
-                            // ✅ Preload next rewarded ad
-                            loadRewardedAd(adUnitId)
-                        }
-                        is RewardedAdShowResult.Error -> {
-                            Log.e("FavouriteViewModel", "❌ Failed to show rewarded ad for story: ${result.message}")
-                            val currentState = _uiState.value as? FavouriteUiState.Content
-                            if (currentState != null) {
-                                _uiState.value = currentState.copy(
-                                    adState = currentState.adState.copy(
-                                        rewardedAdError = result.message
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("FavouriteViewModel", "💥 Show rewarded ad exception for story: ${e.message}", e)
-            }
-        }
     }
 
     private fun showRewardedAdForLullaby(adUnitId: String, activity: Activity, lullaby: LullabyDomainModel) {
-        Log.d("FavouriteViewModel", "🎬 Showing rewarded ad for lullaby: ${lullaby.musicName}")
-
-        // ✅ Analytics: Track ad requested
-        analyticsHelper.logRewardedAdRequested(
-            contentType = "lullaby",
-            contentId = lullaby.documentId,
-            contentName = lullaby.musicName,
-            isPremium = !lullaby.isFree,
-            sourceScreen = "favourites",
-            adUnitId = adUnitId
+        // ✅ SRP FIX: Delegate to AdManager with ContentInfo
+        adManager.showRewardedAd(
+            adUnitId = adUnitId,
+            activity = activity,
+            content = ContentInfo.fromLullaby(lullaby),
+            sourceScreen = "favourite_screen"
         )
-
-        // ✅ Check if ad is available
-        if (!checkRewardedAdAvailabilityUseCase(adUnitId)) {
-            Log.w("FavouriteViewModel", "❌ Rewarded ad not available, loading new ad...")
-            loadRewardedAd(adUnitId)
-            Toast.makeText(activity, "Loading ad, please try again in a moment", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val adStartTime = System.currentTimeMillis()
-        viewModelScope.launch {
-            try {
-                showRewardedAdUseCase(adUnitId, activity).collect { result ->
-                    when (result) {
-                        is RewardedAdShowResult.Loading -> {
-                            Log.d("FavouriteViewModel", "⏳ Rewarded ad loading for lullaby: ${lullaby.musicName}")
-
-                            // ✅ Analytics: Track ad started
-                            analyticsHelper.logRewardedAdStarted(adUnitId, lullaby.documentId)
-                        }
-                        is RewardedAdShowResult.Success -> {
-                            Log.d("FavouriteViewModel", "🎉 Reward earned for lullaby: ${lullaby.musicName} - ${result.reward.amount} ${result.reward.type}")
-                            Log.d("FavouriteViewModel", "📋 Lullaby documentId: ${lullaby.documentId}")
-
-                            val watchDuration = ((System.currentTimeMillis() - adStartTime) / 1000).toInt()
-
-                            // ✅ Analytics: Track ad completed
-                            analyticsHelper.logRewardedAdCompleted(
-                                adUnitId = adUnitId,
-                                contentType = "lullaby",
-                                contentId = lullaby.documentId,
-                                contentName = lullaby.musicName,
-                                rewardAmount = result.reward.amount,
-                                rewardType = result.reward.type,
-                                watchDurationSeconds = watchDuration
-                            )
-
-                            // ✅ NEW: Unlock lullaby for current session via SessionUnlockManager
-                            sessionUnlockManager.unlockItem(
-                                itemId = lullaby.documentId,
-                                itemType = com.naptune.lullabyandstory.data.manager.UnlockType.Lullaby
-                            )
-
-                            // ✅ Analytics: Track content unlocked via ad
-                            analyticsHelper.logContentUnlockedViaAd(
-                                contentType = "lullaby",
-                                contentId = lullaby.documentId,
-                                contentName = lullaby.musicName,
-                                category = "lullaby",
-                                sessionUnlockCount = sessionUnlockManager.getUnlockCount(),
-                                timeSpentBeforeUnlock = (System.currentTimeMillis() - adStartTime) / 1000
-                            )
-
-                            // ✅ Analytics: Track session unlock used
-                            analyticsHelper.logSessionUnlockUsed(
-                                contentType = "lullaby",
-                                contentId = lullaby.documentId,
-                                contentName = lullaby.musicName,
-                                minutesSinceUnlock = 0L // Just unlocked
-                            )
-
-                            // ✅ Debug: Verify unlock
-                            val isNowUnlocked = sessionUnlockManager.isItemUnlocked(lullaby.documentId)
-                            Log.d("FavouriteViewModel", "🔓 Lullaby unlock verified: $isNowUnlocked")
-                            Log.d("FavouriteViewModel", "📊 Total unlocked items: ${sessionUnlockManager.getUnlockCount()}")
-
-                            // Show success toast
-                            Toast.makeText(
-                                activity,
-                                "🎁 ${lullaby.musicName} unlocked for this session!",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                            // ✅ Preload next rewarded ad
-                            loadRewardedAd(adUnitId)
-                        }
-                        is RewardedAdShowResult.Dismissed -> {
-                            Log.d("FavouriteViewModel", "📱 Rewarded ad dismissed for lullaby: ${lullaby.musicName} - ${result.reason}")
-
-                            // ✅ Analytics: Track ad closed early (if not completed)
-                            if (result.reason != "completed") {
-                                val watchedSeconds = ((System.currentTimeMillis() - adStartTime) / 1000).toInt()
-                                analyticsHelper.logRewardedAdClosedEarly(
-                                    adUnitId = adUnitId,
-                                    contentId = lullaby.documentId,
-                                    watchedSeconds = watchedSeconds,
-                                    requiredSeconds = 30 // Typical rewarded ad duration
-                                )
-                            }
-
-                            // ✅ Preload next rewarded ad
-                            loadRewardedAd(adUnitId)
-                        }
-                        is RewardedAdShowResult.Error -> {
-                            Log.e("FavouriteViewModel", "❌ Failed to show rewarded ad for lullaby: ${result.message}")
-                            val currentState = _uiState.value as? FavouriteUiState.Content
-                            if (currentState != null) {
-                                _uiState.value = currentState.copy(
-                                    adState = currentState.adState.copy(
-                                        rewardedAdError = result.message
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("FavouriteViewModel", "💥 Show rewarded ad exception for lullaby: ${e.message}", e)
-            }
-        }
     }
 
     /**

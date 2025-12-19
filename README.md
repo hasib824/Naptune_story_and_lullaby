@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-green.svg" alt="Platform"/>
   <img src="https://img.shields.io/badge/Language-Kotlin-blue.svg" alt="Language"/>
   <img src="https://img.shields.io/badge/Architecture-Clean%20Architecture%20%2B%20MVI-orange.svg" alt="Architecture"/>
+  <img src="https://img.shields.io/badge/Design-SOLID%20Principles-red.svg" alt="SOLID"/>
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-purple.svg" alt="UI"/>
   <img src="https://img.shields.io/badge/Min%20SDK-26-yellow.svg" alt="Min SDK"/>
 </p>
@@ -20,7 +21,7 @@
 
 ## Overview
 
-**Naptune** is a production-ready Android application that helps children fall asleep with soothing lullabies and bedtime stories. **Lullabies can be downloaded for offline playback**, while **stories are streamed online** for the best experience. Built with modern Android development practices, this project demonstrates expertise in Clean Architecture, MVI pattern, and comprehensive feature implementation including offline support, multi-language localization, and monetization.
+**Naptune** is a production-ready Android application that helps children fall asleep with soothing lullabies and bedtime stories. **Lullabies can be downloaded for offline playback**, while **stories are streamed online** for the best experience. Built with modern Android development practices, this project demonstrates expertise in **Clean Architecture**, **MVI pattern**, and **SOLID principles**, with comprehensive feature implementation including offline support, multi-language localization, and monetization.
 
 ---
 
@@ -72,12 +73,13 @@
 
 ## Tech Stack
 
-| Category                 | Technology                                   |
-| ------------------------ | -------------------------------------------- |
-| **Language**             | Kotlin 100%                                  |
-| **UI Framework**         | Jetpack Compose with Material 3              |
-| **Architecture**         | Clean Architecture + MVI (Model-View-Intent) |
-| **Dependency Injection** | Hilt (Dagger)                                |
+| Category                 | Technology                                                    |
+| ------------------------ | ------------------------------------------------------------- |
+| **Language**             | Kotlin 100%                                                   |
+| **UI Framework**         | Jetpack Compose with Material 3                               |
+| **Architecture**         | Clean Architecture + MVI + SOLID Principles                   |
+| **Design Patterns**      | Repository Pattern, Data Source Separation, Dependency Injection |
+| **Dependency Injection** | Hilt (Dagger)                                                 |
 | **Local Database**       | Room Database                                |
 | **Preferences**          | DataStore                                    |
 | **Backend**              | Appwrite (BaaS)                              |
@@ -138,6 +140,179 @@ User Action → Intent → ViewModel → UseCase → Repository → DataSource �
 
 ---
 
+## SOLID Principles Implementation
+
+This project strictly adheres to **SOLID** design principles throughout the **entire architecture** - from data sources and repositories to use cases and view models. Below are representative examples demonstrating each principle.
+
+### Single Responsibility Principle (SRP)
+
+Each class has **one clear responsibility**. The data layer is organized into focused components:
+
+| Component | Single Responsibility |
+|-----------|----------------------|
+| `StoryLocalDataSource` | Core CRUD operations for stories |
+| `StoryTranslationDataSource` | Story translation management & localized queries |
+| `StoryAudioLanguageDataSource` | Story audio language mapping |
+| `LullabyLocalDataSource` | Core CRUD operations for lullabies |
+| `LullabyTranslationDataSource` | Lullaby translation management & localized queries |
+| `FavouriteDataSource` | Shared favourite operations (Story + Lullaby) |
+| `StoryRepositoryImpl` | Coordinates story data flow between remote and local sources |
+| `LullabyRepositoryImpl` | Coordinates lullaby data flow between remote and local sources |
+
+**Example - Focused Data Source:**
+```kotlin
+@Singleton
+class StoryLocalDataSourceImpl @Inject constructor(
+    private val storyDao: StoryDao  // Single dependency
+) : StoryLocalDataSource {
+    // Only CRUD operations - 97 lines, 7 methods
+    override suspend fun insertAllStories(stories: List<StoryLocalEntity>): Int
+    override fun getAllStories(): Flow<List<StoryLocalEntity>>
+    override suspend fun getStoriesCount(): Int
+    // ... only story CRUD operations
+}
+```
+
+**Example - Repository Coordination:**
+```kotlin
+@Singleton
+class StoryRepositoryImpl @Inject constructor(
+    private val storyLocalDataSource: StoryLocalDataSource,
+    private val storyTranslationDataSource: StoryTranslationDataSource,
+    private val storyRemoteDataSource: StoryRemoteDataSource
+    // ... other dependencies
+) : StoryRepository {
+    // Single responsibility: Coordinate data sync and caching
+    override suspend fun fetchStories(): Flow<List<StoryDomainModel>>
+}
+```
+
+### Open/Closed Principle (OCP)
+
+Classes are **open for extension, closed for modification**. New features can be added by extending, not modifying existing code:
+
+```kotlin
+// Extensible repository - can add new data sources without modification
+@Singleton
+class StoryRepositoryImpl @Inject constructor(
+    private val storyLocalDataSource: StoryLocalDataSource,
+    private val storyTranslationDataSource: StoryTranslationDataSource,
+    private val storyAudioLanguageDataSource: StoryAudioLanguageDataSource,
+    private val favouriteDataSource: FavouriteDataSource  // ← New source added via DI
+) : StoryRepository
+```
+
+### Liskov Substitution Principle (LSP)
+
+All implementations are **fully substitutable** for their abstractions:
+
+```kotlin
+// Interface contract
+interface FavouriteDataSource {
+    suspend fun toggleFavourite(documentId: String, itemType: String): Int
+}
+
+// Production implementation
+@Singleton
+class FavouriteDataSourceImpl @Inject constructor(...) : FavouriteDataSource {
+    override suspend fun toggleFavourite(documentId: String, itemType: String): Int {
+        // Real implementation
+    }
+}
+
+// Test implementation - fully substitutable
+class FakeFavouriteDataSource : FavouriteDataSource {
+    override suspend fun toggleFavourite(documentId: String, itemType: String) = 1
+}
+```
+
+### Interface Segregation Principle (ISP)
+
+Clients **depend only on methods they need**. Interfaces are focused and cohesive:
+
+```kotlin
+// Focused interface - only CRUD methods (7 methods)
+interface StoryLocalDataSource {
+    suspend fun insertAllStories(stories: List<StoryLocalEntity>): Int
+    fun getAllStories(): Flow<List<StoryLocalEntity>>
+    suspend fun getStoriesCount(): Int
+    // ... only story CRUD methods
+}
+
+// Separate interface - only translation methods (12 methods)
+interface StoryTranslationDataSource {
+    fun getAllStoriesWithFullLocalization(language: String): Flow<List<StoryWithFullLocalization>>
+    suspend fun insertAllStoryNameTranslations(translations: List<...>): Int
+    // ... only translation-related methods
+}
+```
+
+### Dependency Inversion Principle (DIP)
+
+High-level modules **depend on abstractions**, not concrete implementations:
+
+```kotlin
+// Repository depends on abstractions (interfaces)
+class StoryRepositoryImpl @Inject constructor(
+    private val storyLocalDataSource: StoryLocalDataSource,  // ← Interface
+    private val storyTranslationDataSource: StoryTranslationDataSource,  // ← Interface
+    private val storyRemoteDataSource: StoryRemoteDataSource  // ← Interface
+) : StoryRepository
+
+// Hilt binds abstractions to concrete implementations
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class LocalDataSourceModule {
+    @Binds
+    abstract fun bindStoryLocalDataSource(
+        impl: StoryLocalDataSourceImpl  // ← Concrete
+    ): StoryLocalDataSource  // ← Abstraction
+}
+```
+
+> **Note:** The examples above are representative samples. SOLID principles are consistently applied across **all layers** of the architecture including data sources, repositories, use cases, and view models.
+
+### Data Layer Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     REPOSITORY LAYER                             │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │         StoryRepositoryImpl (Coordinates)                │   │
+│  │  - Handles sync logic, parallel fetching, caching       │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                              │                                   │
+│                              v                                   │
+│  ┌─────────────────┐  ┌──────────────────┐  ┌────────────────┐ │
+│  │ StoryLocalDataSource │  │ StoryTranslation │  │StoryAudioLang  │ │
+│  │                 │  │   DataSource     │  │  DataSource    │ │
+│  │ - CRUD ops      │  │ - Name trans.    │  │ - Audio paths  │ │
+│  │ - Count         │  │ - Desc. trans.   │  │ - Language map │ │
+│  │ - Favourite     │  │ - Localized JOIN │  │                │ │
+│  └────────┬────────┘  └────────┬─────────┘  └────────┬───────┘ │
+│           │                    │                      │         │
+│           v                    v                      v         │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                  DAO LAYER (Room)                        │   │
+│  │  StoryDao  StoryNameTranslationDao  StoryAudioDao       │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Benefits Achieved
+
+| Benefit | Impact |
+|---------|--------|
+| **Maintainability** | Changes to translations don't affect CRUD operations; isolated modifications |
+| **Testability** | Each component can be independently mocked and unit tested |
+| **Scalability** | New features can be added without modifying existing code |
+| **Reusability** | Shared components like `FavouriteDataSource` eliminate code duplication |
+| **Code Quality** | Focused classes with clear boundaries (90-200 lines per class) |
+| **Team Collaboration** | Multiple developers can work on different layers/features simultaneously |
+| **Type Safety** | Interface contracts ensure compile-time safety and prevent runtime errors |
+
+---
+
 ## Project Structure
 
 ```
@@ -150,7 +325,23 @@ app/src/main/java/com/naptune/lullabyandstory/
 │   ├── local/                      # Room database
 │   │   ├── dao/                    # Data Access Objects
 │   │   ├── database/               # Database configuration
-│   │   └── entity/                 # Database entities
+│   │   ├── entity/                 # Database entities
+│   │   └── source/                 # Local data sources (SOLID compliant)
+│   │       ├── favourite/          # Shared favourite operations
+│   │       │   ├── FavouriteDataSource.kt
+│   │       │   └── FavouriteDataSourceImpl.kt
+│   │       ├── lullaby/            # Lullaby data sources
+│   │       │   ├── LullabyLocalDataSource.kt (CRUD)
+│   │       │   ├── LullabyLocalDataSourceImpl.kt
+│   │       │   ├── LullabyTranslationDataSource.kt
+│   │       │   └── LullabyTranslationDataSourceImpl.kt
+│   │       └── story/              # Story data sources
+│   │           ├── StoryLocalDataSource.kt (CRUD)
+│   │           ├── StoryLocalDataSourceImpl.kt
+│   │           ├── StoryTranslationDataSource.kt
+│   │           ├── StoryTranslationDataSourceImpl.kt
+│   │           ├── StoryAudioLanguageDataSource.kt
+│   │           └── StoryAudioLanguageDataSourceImpl.kt
 │   ├── manager/                    # Session & state managers
 │   ├── mapper/                     # Data ↔ Domain mappers
 │   ├── model/                      # Remote data models
@@ -161,9 +352,11 @@ app/src/main/java/com/naptune/lullabyandstory/
 │   │   └── prdownloader/           # File download manager
 │   └── repository/                 # Repository implementations
 │
-├── di/                             # Dependency Injection
+├── di/                             # Dependency Injection (Hilt)
 │   ├── AppModule.kt
 │   ├── DatabaseModule.kt
+│   ├── LocalDataSourceModule.kt    # Data source bindings (SOLID)
+│   ├── RemoteDataSourceModule.kt
 │   ├── RepositoryModule.kt
 │   ├── AdMobModule.kt
 │   └── FcmModule.kt
@@ -503,5 +696,5 @@ You may obtain a copy of the License at
 
 <p align="center">
   Built with modern Android development practices<br>
-  <b>Kotlin | Jetpack Compose | Clean Architecture | MVI</b>
+  <b>Kotlin | Jetpack Compose | Clean Architecture | MVI | SOLID Principles</b>
 </p>

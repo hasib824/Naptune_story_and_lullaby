@@ -20,7 +20,8 @@
       "Bash(nul)",
       "WebFetch(domain:support.google.com)",
       "Bash(mkdir:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(.gradlew.bat assembleDebug:*)"
     ],
     "deny": [],
     "ask": []

@@ -3,9 +3,10 @@ package com.naptune.lullabyandstory.data.repository
 import android.content.Context
 import android.util.Log
 import com.naptune.lullabyandstory.data.datastore.AppPreferences
-import com.naptune.lullabyandstory.data.local.source.lullaby.LullabyLocalDataSource
-import com.naptune.lullabyandstory.data.local.source.lullaby.LullabyLocalDataSourceImpl
 import com.naptune.lullabyandstory.data.local.source.story.StoryLocalDataSource
+import com.naptune.lullabyandstory.data.local.source.story.StoryTranslationDataSource
+import com.naptune.lullabyandstory.data.local.source.story.StoryAudioLanguageDataSource
+import com.naptune.lullabyandstory.data.local.source.favourite.FavouriteDataSource
 import com.naptune.lullabyandstory.domain.manager.LanguageStateManager
 import com.naptune.lullabyandstory.data.mapper.remoteToLocalModelList
 import com.naptune.lullabyandstory.data.mapper.toStoryDescriptionTranslationEntityList
@@ -33,10 +34,25 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
 import javax.inject.Singleton
+/**
+ * Implementation of StoryRepository
+ *
+ * SOLID Principles Applied:
+ * - Dependency Inversion: Depends on data source abstractions (interfaces)
+ * - Single Responsibility: Coordinates story data operations between remote, local, and cache
+ *
+ * @param storyLocalDataSource Handles core story CRUD operations
+ * @param storyTranslationDataSource Handles story translation operations
+ * @param storyAudioLanguageDataSource Handles story audio language operations
+ * @param favouriteDataSource Handles favourite operations (shared with lullaby)
+ */
 @Singleton
 class StoryRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val storyLocalDataSourceImpl: StoryLocalDataSource,
+    private val storyLocalDataSource: StoryLocalDataSource,
+    private val storyTranslationDataSource: StoryTranslationDataSource,
+    private val storyAudioLanguageDataSource: StoryAudioLanguageDataSource,
+    private val favouriteDataSource: FavouriteDataSource,
     private val storyRemoteDataSourceImpl: StoryRemoteDataSource,
     private val storyNameTranslationRemoteDataSource: StoryNameTranslationRemoteDataSource,
     private val storyDescriptionTranslationRemoteDataSource: StoryDescriptionTranslationRemoteDataSource,
@@ -58,7 +74,7 @@ class StoryRepositoryImpl @Inject constructor(
                     appPreference.isSyncNeeded(isFromStory = true)
                 }
                 val localCount = withContext(Dispatchers.IO) {
-                    storyLocalDataSourceImpl.getStoriesCount()
+                    storyLocalDataSource.getStoriesCount()
                 }
 
                 Log.d("StoryRepositoryImpl", "🔄 Story sync needed: $syncNeeded, Local count: $localCount")
@@ -120,21 +136,21 @@ class StoryRepositoryImpl @Inject constructor(
                                 val insertJobs = mutableListOf<Deferred<Any>>()
 
                                 // Always insert stories
-                                insertJobs.add(async { storyLocalDataSourceImpl.insertAllStories(storyEntities) })
+                                insertJobs.add(async { storyLocalDataSource.insertAllStories(storyEntities) })
 
                                 // Insert name translations if available
                                 nameTranslationEntities?.let { entities ->
-                                    insertJobs.add(async { storyLocalDataSourceImpl.insertAllStoryNameTranslations(entities) })
+                                    insertJobs.add(async { storyTranslationDataSource.insertAllStoryNameTranslations(entities) })
                                 }
 
                                 // Insert description translations if available
                                 descriptionTranslationEntities?.let { entities ->
-                                    insertJobs.add(async { storyLocalDataSourceImpl.insertAllStoryDescriptionTranslations(entities) })
+                                    insertJobs.add(async { storyTranslationDataSource.insertAllStoryDescriptionTranslations(entities) })
                                 }
 
                                 // Insert audio languages if available
                                 audioLanguageEntities?.let { entities ->
-                                    insertJobs.add(async { storyLocalDataSourceImpl.insertAllStoryAudioLanguages(entities) })
+                                    insertJobs.add(async { storyAudioLanguageDataSource.insertAllStoryAudioLanguages(entities) })
                                 }
                                 // Wait for all database operations to complete
                                 insertJobs.awaitAll()
@@ -204,7 +220,7 @@ class StoryRepositoryImpl @Inject constructor(
         return languageStateManager.currentLanguage.flatMapLatest { currentLanguage ->
             Log.d("StoryRepositoryImpl", "🚀 REVOLUTIONARY: Getting reactive stories with FULL localization for language: $currentLanguage")
 
-            storyLocalDataSourceImpl.getAllStoriesWithFullLocalization(currentLanguage)
+            storyTranslationDataSource.getAllStoriesWithFullLocalization(currentLanguage)
                 .map { storiesWithFullLocalization ->
                     Log.d("StoryRepositoryImpl", "🔄 REVOLUTIONARY: Database returned ${storiesWithFullLocalization.size} items with FULL localization for language: $currentLanguage")
 
@@ -249,23 +265,23 @@ class StoryRepositoryImpl @Inject constructor(
                 Log.d("StoryRepositoryImpl", "❤️ Toggling story favourite for ID: $documentid")
 
                 // Check current favourite status BEFORE toggling
-                val wasAlreadyFavourite = storyLocalDataSourceImpl.checkIfItemIsFavourite(documentid)
+                val wasAlreadyFavourite = storyLocalDataSource.checkIfItemIsFavourite(documentid)
                     .first()
 
                 Log.d("StoryRepositoryImpl", "📊 Current favourite status: $wasAlreadyFavourite")
 
                 // Toggle the favourite boolean in story table
-                storyLocalDataSourceImpl.toggleStoryFavourite(documentid)
+                storyLocalDataSource.toggleStoryFavourite(documentid)
 
                 // Update metadata for LIFO ordering
                 if (wasAlreadyFavourite) {
                     // Was favourite, now unfavouriting -> DELETE metadata
                     Log.d("StoryRepositoryImpl", "💔 Removing from favourites, deleting metadata")
-                    storyLocalDataSourceImpl.deleteFavouriteMetadata(documentid, "story")
+                    favouriteDataSource.deleteFavouriteMetadata(documentid, "story")
                 } else {
                     // Was not favourite, now favouriting -> INSERT metadata
                     Log.d("StoryRepositoryImpl", "❤️ Adding to favourites, inserting metadata")
-                    storyLocalDataSourceImpl.insertFavouriteMetadata(documentid, "story")
+                    favouriteDataSource.insertFavouriteMetadata(documentid, "story")
                 }
 
                 Log.d("StoryRepositoryImpl", "✅ Story favourite toggled successfully with LIFO metadata")
@@ -277,7 +293,7 @@ class StoryRepositoryImpl @Inject constructor(
 
     override suspend fun checkIfItemIsFavourite(documentid: String): Flow<Boolean> {
         Log.d("StoryRepositoryImpl", "🔍 Checking if story is favourite for ID: $documentid")
-        return storyLocalDataSourceImpl.checkIfItemIsFavourite(documentid)
+        return storyLocalDataSource.checkIfItemIsFavourite(documentid)
             .flowOn(Dispatchers.IO)
     }
     
@@ -288,7 +304,7 @@ class StoryRepositoryImpl @Inject constructor(
 
             Log.d("StoryRepositoryImpl", "❤️ REVOLUTIONARY: Getting favourite stories with FULL localization for language: $currentLanguage")
 
-            storyLocalDataSourceImpl.getFavouriteStoriesWithFullLocalization(currentLanguage)
+            storyTranslationDataSource.getFavouriteStoriesWithFullLocalization(currentLanguage)
                 .map { storiesWithFullLocalization ->
                     Log.d("StoryRepositoryImpl", "❤️ REVOLUTIONARY: Database returned ${storiesWithFullLocalization.size} favourite items with FULL localization for language: $currentLanguage")
 

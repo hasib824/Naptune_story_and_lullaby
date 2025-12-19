@@ -11,11 +11,8 @@ import com.naptune.lullabyandstory.domain.usecase.ShareAppUseCase
 import com.naptune.lullabyandstory.utils.LanguageManager
 import com.naptune.lullabyandstory.data.model.Language
 import com.naptune.lullabyandstory.data.model.getSupportedLanguages
-import com.naptune.lullabyandstory.domain.model.AdLoadResult
-import com.naptune.lullabyandstory.domain.model.BannerAdDomainModel
-import com.naptune.lullabyandstory.domain.usecase.admob.InitializeAdMobUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.LoadBannerAdUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.DestroyBannerAdUseCase
+import com.naptune.lullabyandstory.data.manager.AdManager
+import com.naptune.lullabyandstory.domain.model.AdSizeType
 import com.naptune.lullabyandstory.utils.InternetConnectionManager
 import com.naptune.lullabyandstory.utils.analytics.AnalyticsHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,8 +27,16 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * ViewModel for Profile Screen following MVI pattern
- * Handles all business logic and state management for profile operations
+ * ViewModel for Profile Screen.
+ * REFACTORED: Now follows Single Responsibility Principle (SRP).
+ * Ad management logic delegated to unified AdManager.
+ *
+ * Responsibilities:
+ * - Profile settings management (share, feedback, rate)
+ * - Language selection
+ * - Premium status display
+ *
+ * Ad management delegated to: AdManager (shared across all ViewModels)
  */
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
@@ -39,15 +44,10 @@ class ProfileViewModel @Inject constructor(
     private val sendFeedbackUseCase: SendFeedbackUseCase,
     private val rateAppUseCase: RateAppUseCase,
     private val languageManager: LanguageManager,
-    // ✅ NEW: AdMob use cases
-    private val initializeAdMobUseCase: InitializeAdMobUseCase,
-    private val loadBannerAdUseCase: LoadBannerAdUseCase,
-    private val destroyBannerAdUseCase: DestroyBannerAdUseCase,
-    // ✅ NEW: Internet connection manager
+    // ✅ SRP FIX: Single unified ad manager instead of 3 ad use cases
+    private val adManager: AdManager,
     val internetConnectionManager: InternetConnectionManager,
-    // ✅ Analytics
     private val analyticsHelper: AnalyticsHelper,
-
     private val billingManager: BillingManager
 ) : ViewModel() {
 
@@ -62,15 +62,23 @@ class ProfileViewModel @Inject constructor(
     val uiState: StateFlow<ProfileUiState> = combine(
         _uiState,
         billingManager.isPurchased,
-        _currentLanguage
-    ) { baseState, isPremium, language ->
+        _currentLanguage,
+        adManager.adState  // ✅ Add ad state from manager
+    ) { baseState, isPremium, language, adState ->
         Log.d("ProfileViewModel", "🔄 State combine - isPremium: $isPremium, language: ${language.code}")
         baseState.copy(
             isPremiumUser = isPremium,
-            currentLanguage = language
+            currentLanguage = language,
+            adState = adState  // ✅ Sync ad state from manager
         )
     }.onStart {
-
+        // ✅ SRP FIX: Delegate ad initialization to manager
+        adManager.initializeAds()
+        adManager.loadBannerAd(
+            adUnitId = com.naptune.lullabyandstory.data.network.admob.AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
+            adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER,
+            placement = "profile_screen"
+        )
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -86,23 +94,8 @@ class ProfileViewModel @Inject constructor(
         trackScreenView()
         loadCurrentLanguage()
 
-        // ✅ Initialize ads only for free users (reactive to premium status changes)
-        viewModelScope.launch {
-            var adsInitialized = false
-            billingManager.isPurchased.collect { isPremium ->
-                if (!isPremium && !adsInitialized) {
-                    Log.d("ProfileViewModel", "🎯 User is free - initializing ads")
-                    initializeAds()
-                    loadBannerAd(
-                        adUnitId = com.naptune.lullabyandstory.data.network.admob.AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
-                        adSizeType = com.naptune.lullabyandstory.domain.model.AdSizeType.ANCHORED_ADAPTIVE_BANNER
-                    )
-                    adsInitialized = true
-                } else if (isPremium) {
-                    Log.d("ProfileViewModel", "👑 User is premium - skipping ads")
-                }
-            }
-        }
+        // ✅ Ad initialization moved to state combine onStart block
+        // This ensures ads are loaded when the state flow is collected
     }
 
     /**
@@ -283,108 +276,21 @@ class ProfileViewModel @Inject constructor(
      * Initialize AdMob SDK
      */
     private fun initializeAds() {
-        viewModelScope.launch {
-            try {
-                Log.d("ProfileViewModel", "🎯 Initializing AdMob...")
-                initializeAdMobUseCase()
-                _uiState.value = _uiState.value.copy(
-                    adState = _uiState.value.adState.copy(isAdInitialized = true)
-                )
-                Log.d("ProfileViewModel", "✅ AdMob initialized successfully")
-            } catch (e: Exception) {
-                Log.e("ProfileViewModel", "❌ AdMob initialization failed: ${e.message}", e)
-            }
-        }
+        adManager.initializeAds()
     }
 
     /**
      * Load banner ad
      */
     private fun loadBannerAd(adUnitId: String, adSizeType: com.naptune.lullabyandstory.domain.model.AdSizeType) {
-        viewModelScope.launch {
-            try {
-                Log.d("ProfileViewModel", "📢 Loading banner ad: $adUnitId")
-                loadBannerAdUseCase(adUnitId, adSizeType).collect { result ->
-                    when (result) {
-                        is AdLoadResult.Loading -> {
-                            Log.d("ProfileViewModel", "⏳ Banner ad loading...")
-                            val defaultHeight = when (adSizeType) {
-                                com.naptune.lullabyandstory.domain.model.AdSizeType.ANCHORED_ADAPTIVE_BANNER -> 90
-                                com.naptune.lullabyandstory.domain.model.AdSizeType.LARGE_BANNER -> 100
-                                else -> 50
-                            }
-
-                            val currentState = _uiState.value
-                            val loadingAd = currentState.adState.bannerAd?.copy(isLoading = true, error = null)
-                                ?: BannerAdDomainModel(
-                                    adUnitId = adUnitId,
-                                    adSize = com.naptune.lullabyandstory.domain.model.AdSize(
-                                        width = -1,
-                                        height = defaultHeight,
-                                        type = adSizeType
-                                    ),
-                                    isLoading = true
-                                )
-                            _uiState.value = currentState.copy(
-                                adState = currentState.adState.copy(bannerAd = loadingAd)
-                            )
-                        }
-                        is AdLoadResult.Success -> {
-                            Log.d("ProfileViewModel", "✅ Banner ad loaded successfully")
-                            _uiState.value = _uiState.value.copy(
-                                adState = _uiState.value.adState.copy(
-                                    bannerAd = result.bannerAd
-                                )
-                            )
-                        }
-                        is AdLoadResult.Error -> {
-                            Log.e("ProfileViewModel", "❌ Banner ad load failed: ${result.message}")
-                            val defaultHeight = when (adSizeType) {
-                                com.naptune.lullabyandstory.domain.model.AdSizeType.ANCHORED_ADAPTIVE_BANNER -> 90
-                                com.naptune.lullabyandstory.domain.model.AdSizeType.LARGE_BANNER -> 100
-                                else -> 50
-                            }
-
-                            val currentState = _uiState.value
-                            val errorAd = currentState.adState.bannerAd?.copy(
-                                isLoading = false,
-                                isLoaded = false,
-                                error = result.message
-                            ) ?: BannerAdDomainModel(
-                                adUnitId = adUnitId,
-                                adSize = com.naptune.lullabyandstory.domain.model.AdSize(
-                                    width = -1,
-                                    height = defaultHeight,
-                                    type = adSizeType
-                                ),
-                                isLoading = false,
-                                isLoaded = false,
-                                error = result.message
-                            )
-                            _uiState.value = currentState.copy(
-                                adState = currentState.adState.copy(bannerAd = errorAd)
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ProfileViewModel", "❌ Exception loading banner ad: ${e.message}", e)
-            }
-        }
+        adManager.loadBannerAd(adUnitId, adSizeType, placement = "profile_screen")
     }
 
     /**
      * Destroy banner ad when leaving screen
      */
     private fun destroyBannerAd(adUnitId: String) {
-        viewModelScope.launch {
-            try {
-                Log.d("ProfileViewModel", "🗑️ Destroying banner ad: $adUnitId")
-                destroyBannerAdUseCase(adUnitId)
-            } catch (e: Exception) {
-                Log.e("ProfileViewModel", "❌ Error destroying banner ad: ${e.message}", e)
-            }
-        }
+        adManager.destroyBannerAd(adUnitId)
     }
 
     /**
@@ -392,12 +298,11 @@ class ProfileViewModel @Inject constructor(
      */
     override fun onCleared() {
         super.onCleared()
-        Log.d("ProfileViewModel", "🧹 Cleaning up ProfileViewModel - destroying ads")
-        try {
-            // Destroy all ads to prevent memory leaks
-            destroyBannerAd(com.naptune.lullabyandstory.data.network.admob.AdMobDataSource.TEST_BANNER_AD_UNIT_ID)
-        } catch (e: Exception) {
-            Log.e("ProfileViewModel", "❌ Error in onCleared: ${e.message}", e)
-        }
+        // ⚠️ IMPORTANT: Do NOT destroy banner ad here!
+        // Banner ads use shared adUnitId stored in AdMobDataSource singleton.
+        // Destroying here would also destroy other screens' banner ads,
+        // causing them to vanish when user navigates between screens.
+        // The ad will be recreated when user navigates to this screen again.
+        Log.d("ProfileViewModel", "🧹 ViewModel cleared - Banner ad preserved (shared across screens)")
     }
 }

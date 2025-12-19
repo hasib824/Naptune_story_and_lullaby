@@ -10,10 +10,8 @@ import com.naptune.lullabyandstory.domain.usecase.lullaby.CheckIfLullabyIsFavour
 import com.naptune.lullabyandstory.domain.usecase.lullaby.ToggleLullabyFavouriteUseCase
 import com.naptune.lullabyandstory.presentation.player.service.MusicController
 import com.naptune.lullabyandstory.domain.model.StoryDomainModel
-import com.naptune.lullabyandstory.domain.usecase.admob.InitializeAdMobUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.LoadBannerAdUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.DestroyBannerAdUseCase
-import com.naptune.lullabyandstory.domain.model.AdLoadResult
+import com.naptune.lullabyandstory.data.manager.AdManager
+import com.naptune.lullabyandstory.domain.model.AdSizeType
 import com.naptune.lullabyandstory.presentation.player.timermodal.operations.TimerAlarmManager
 import com.naptune.lullabyandstory.data.datastore.AppPreferences
 import android.content.Context
@@ -55,34 +53,52 @@ data class TimerCountdownState(
     val isVisible: Boolean = false
 )
 
+/**
+ * ViewModel for Audio Player screen.
+ * REFACTORED: Now follows Single Responsibility Principle (SRP).
+ * Ad management logic delegated to unified AdManager.
+ *
+ * Responsibilities:
+ * - Audio playback control and state management
+ * - Favourite toggle for lullabies and stories
+ * - Timer management for sleep timer
+ * - Story auto-play functionality
+ *
+ * Ad management delegated to: AdManager (shared across all ViewModels)
+ */
 @HiltViewModel
 class AudioPlayerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val musicController: MusicController,
     private val toogleStoryFavouriteUseCase: ToogleStoryFavouriteUseCase,
     private val checkIfItemIsFavouriteUseCase: CheckIfItemIsFavouriteUseCase,
-    // ✅ New lullaby favourite use cases
     private val toggleLullabyFavouriteUseCase: ToggleLullabyFavouriteUseCase,
     private val checkIfLullabyIsFavouriteUseCase: CheckIfLullabyIsFavouriteUseCase,
-    // ✅ NEW: Story list fetching use case
     private val fetchStoriesUsecase: FetchStoriesUsecase,
-    // ✅ NEW: AdMob use cases
-    private val initializeAdMobUseCase: InitializeAdMobUseCase,
-    private val loadBannerAdUseCase: LoadBannerAdUseCase,
-    private val destroyBannerAdUseCase: DestroyBannerAdUseCase,
-    // ✅ NEW: Timer and preferences
+    // ✅ SRP FIX: Single unified ad manager instead of 3 ad use cases
+    private val adManager: AdManager,
     private val appPreferences: AppPreferences,
-    // ✅ NEW: Timer alarm manager with DataStore
     private val timerAlarmManager: TimerAlarmManager,
-    // ✅ Firebase Analytics
     private val analyticsHelper: com.naptune.lullabyandstory.utils.analytics.AnalyticsHelper,
-    // ✅ Billing - Premium status management
     private val billingManager: com.naptune.lullabyandstory.data.billing.BillingManager
 ) : ViewModel() {
 
 
     private val _uiState = MutableStateFlow(AudioPlayerUiState())
-    val uiState: StateFlow<AudioPlayerUiState> = _uiState.asStateFlow()
+
+    // ✅ Combine base state with ad state from AdManager
+    val uiState: StateFlow<AudioPlayerUiState> = combine(
+        _uiState,
+        adManager.adState
+    ) { baseState, adState ->
+        baseState.copy(
+            bannerAd = adState.bannerAd  // ✅ Sync banner ad from AdManager
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        AudioPlayerUiState()
+    )
 
     // ✅ Premium status from BillingManager
     val isPurchased: StateFlow<Boolean> = billingManager.isPurchased.stateIn(
@@ -134,6 +150,23 @@ class AudioPlayerViewModel @Inject constructor(
                         loadStoryList()
                     }
                 }
+        }
+
+        // ✅ Initialize ads for free users
+        viewModelScope.launch {
+            billingManager.isPurchased.collect { isPremium ->
+                if (!isPremium) {
+                    Log.d("AudioPlayerViewModel", "📢 Free user - Initializing ads")
+                    adManager.initializeAds()
+                    adManager.loadBannerAd(
+                        adUnitId = com.naptune.lullabyandstory.data.network.admob.AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
+                        adSizeType = com.naptune.lullabyandstory.domain.model.AdSizeType.MEDIUM_RECTANGLE,
+                        placement = "audio_player_screen"
+                    )
+                } else {
+                    Log.d("AudioPlayerViewModel", "👑 Premium user - Skipping ads")
+                }
+            }
         }
     }
 
@@ -1799,15 +1832,7 @@ class AudioPlayerViewModel @Inject constructor(
      * Initialize AdMob SDK
      */
     private fun initializeAds() {
-        Log.d("AudioPlayerViewModel", "🚀 Initializing AdMob SDK...")
-        viewModelScope.launch {
-            try {
-                initializeAdMobUseCase()
-                Log.d("AudioPlayerViewModel", "✅ AdMob SDK initialized successfully")
-            } catch (e: Exception) {
-                Log.e("AudioPlayerViewModel", "❌ Error initializing AdMob: ${e.message}")
-            }
-        }
+        adManager.initializeAds()
     }
 
     /**
@@ -1817,66 +1842,14 @@ class AudioPlayerViewModel @Inject constructor(
         adUnitId: String,
         adSizeType: com.naptune.lullabyandstory.domain.model.AdSizeType
     ) {
-        Log.d("AudioPlayerViewModel", "📢 Loading banner ad - Unit: $adUnitId, Type: $adSizeType")
-        viewModelScope.launch {
-            try {
-                loadBannerAdUseCase(adUnitId, adSizeType).collect { result ->
-                    when (result) {
-                        is AdLoadResult.Loading -> {
-                            Log.d("AudioPlayerViewModel", "⏳ Ad loading...")
-                            _uiState.value = _uiState.value.copy(
-                                bannerAd = _uiState.value.bannerAd?.copy(
-                                    isLoading = true,
-                                    error = null
-                                )
-                            )
-                        }
-
-                        is AdLoadResult.Success -> {
-                            Log.d(
-                                "AudioPlayerViewModel",
-                                "✅ Ad loaded successfully: ${result.bannerAd.adUnitId}"
-                            )
-                            _uiState.value = _uiState.value.copy(bannerAd = result.bannerAd)
-                        }
-
-                        is AdLoadResult.Error -> {
-                            Log.e("AudioPlayerViewModel", "❌ Ad loading failed: ${result.message}")
-                            _uiState.value = _uiState.value.copy(
-                                bannerAd = _uiState.value.bannerAd?.copy(
-                                    isLoading = false,
-                                    error = result.message
-                                )
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("AudioPlayerViewModel", "❌ Error loading ad: ${e.message}")
-                _uiState.value = _uiState.value.copy(
-                    bannerAd = _uiState.value.bannerAd?.copy(
-                        isLoading = false,
-                        error = e.message ?: "Unknown error occurred"
-                    )
-                )
-            }
-        }
+        adManager.loadBannerAd(adUnitId, adSizeType, placement = "audio_player_screen")
     }
 
     /**
      * Destroy banner ad
      */
     private fun destroyBannerAd(adUnitId: String) {
-        Log.d("AudioPlayerViewModel", "🗑️ Destroying banner ad: $adUnitId")
-        viewModelScope.launch {
-            try {
-                destroyBannerAdUseCase(adUnitId)
-                _uiState.value = _uiState.value.copy(bannerAd = null)
-                Log.d("AudioPlayerViewModel", "✅ Ad destroyed successfully")
-            } catch (e: Exception) {
-                Log.e("AudioPlayerViewModel", "❌ Error destroying ad: ${e.message}")
-            }
-        }
+        adManager.destroyBannerAd(adUnitId)
     }
 
     // ✅ NEW: Timer scheduling functionality moved from Screen
@@ -2192,20 +2165,13 @@ class AudioPlayerViewModel @Inject constructor(
         // Cancel timer countdown job
         timerCountdownJob?.cancel()
 
-        // Destroy any active ads
-        _uiState.value.bannerAd?.let { ad ->
-            // ✅ Use GlobalScope for cleanup that must complete (viewModelScope is cancelled in onCleared)
-            GlobalScope.launch(Dispatchers.Main.immediate) {
-                try {
-                    destroyBannerAdUseCase(ad.adUnitId)
-                } catch (e: Exception) {
-                    Log.e(
-                        "AudioPlayerViewModel",
-                        "❌ Error destroying ad in onCleared: ${e.message}"
-                    )
-                }
-            }
-        }
+        // ⚠️ IMPORTANT: Do NOT destroy banner ad here!
+        // Banner ads use shared adUnitId stored in AdMobDataSource singleton.
+        // Destroying here would also destroy other screens' banner ads,
+        // causing them to vanish when user navigates between screens.
+        // The ad will be recreated when user navigates to this screen again.
+        Log.d("AudioPlayerViewModel", "🧹 ViewModel cleared - Banner ad preserved (shared across screens)")
+
         // Don't release the music controller - let it continue playing in background
     }
 }

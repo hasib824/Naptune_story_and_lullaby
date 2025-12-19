@@ -16,3 +16,6 @@ local.properties
 # Ignore Firebase configuration file
 google-services.json
 null
+
+# Ignore optimization planning documentation
+HOME_SCREEN_OPTIMIZATION_PLAN.md

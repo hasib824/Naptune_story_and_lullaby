@@ -5,25 +5,21 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.naptune.lullabyandstory.data.billing.BillingManager
+import com.naptune.lullabyandstory.data.manager.AdManager
+import com.naptune.lullabyandstory.data.manager.SessionUnlockManager
+import com.naptune.lullabyandstory.data.network.admob.AdMobDataSource
 import com.naptune.lullabyandstory.domain.data.DownloadLullabyResult
+import com.naptune.lullabyandstory.domain.model.AdSizeType
+import com.naptune.lullabyandstory.domain.model.ContentInfo
 import com.naptune.lullabyandstory.domain.model.LullabyDomainModel
-import com.naptune.lullabyandstory.presentation.main.AdUiState
 import com.naptune.lullabyandstory.domain.usecase.lullaby.DownloaLullabyUsecase
 import com.naptune.lullabyandstory.domain.usecase.lullaby.FetchLullabiesUseCase
+import com.naptune.lullabyandstory.presentation.main.AdUiState
 import com.naptune.lullabyandstory.presentation.player.service.MusicController
-import com.naptune.lullabyandstory.domain.usecase.admob.InitializeAdMobUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.LoadBannerAdUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.DestroyBannerAdUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.LoadRewardedAdUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.ShowRewardedAdUseCase
-import com.naptune.lullabyandstory.domain.usecase.admob.CheckRewardedAdAvailabilityUseCase
-import com.naptune.lullabyandstory.domain.model.AdLoadResult
-import com.naptune.lullabyandstory.domain.model.RewardedAdLoadResult
-import com.naptune.lullabyandstory.domain.model.RewardedAdShowResult
-import com.naptune.lullabyandstory.data.network.admob.AdMobDataSource
-import com.naptune.lullabyandstory.domain.model.AdSizeType
 import com.naptune.lullabyandstory.utils.InternetConnectionManager
 import com.naptune.lullabyandstory.utils.LanguageManager
+import com.naptune.lullabyandstory.utils.analytics.AnalyticsHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,44 +29,44 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 
+/**
+ * ViewModel for Lullaby browse screen.
+ * REFACTORED: Now follows Single Responsibility Principle (SRP).
+ * Ad management logic extracted to unified AdManager.
+ *
+ * Responsibilities:
+ * - Lullaby data fetching and management
+ * - Download management
+ * - Category filtering
+ * - Music playback coordination
+ *
+ * Ad management delegated to: AdManager (shared across all ViewModels)
+ */
 @HiltViewModel
 class LullabyViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val fetchLullabiesUseCase: FetchLullabiesUseCase,
     private val downloaLullabyUsecase: DownloaLullabyUsecase,
     private val internetConnectionManager: InternetConnectionManager,
-    // ✅ Inject MusicController to track playing state
     private val musicController: MusicController,
-    // AdMob use cases
-    private val initializeAdMobUseCase: InitializeAdMobUseCase,
-    private val loadBannerAdUseCase: LoadBannerAdUseCase,
-    private val destroyBannerAdUseCase: DestroyBannerAdUseCase,
-    // Rewarded Ad use cases
-    private val loadRewardedAdUseCase: LoadRewardedAdUseCase,
-    private val showRewardedAdUseCase: ShowRewardedAdUseCase,
-    private val checkRewardedAdAvailabilityUseCase: CheckRewardedAdAvailabilityUseCase,
-    // ✅ NEW: Session unlock manager for rewarded ad unlocks
-    private val sessionUnlockManager: com.naptune.lullabyandstory.data.manager.SessionUnlockManager,
+    private val sessionUnlockManager: SessionUnlockManager,
     val languageManager: LanguageManager,
-    // ✅ Analytics
-    private val analyticsHelper: com.naptune.lullabyandstory.utils.analytics.AnalyticsHelper,
-    // ✅ Billing - Premium status and purchase management
-    private val billingManager: com.naptune.lullabyandstory.data.billing.BillingManager
+    private val analyticsHelper: AnalyticsHelper,
+    private val billingManager: BillingManager,
+    // ✅ SRP FIX: Single unified ad manager instead of 6 ad use cases
+    private val adManager: AdManager
 ) : ViewModel() {
 
     private val _lullabyUiState = MutableStateFlow<LullabyUiState>(LullabyUiState.IsLoading)
 
     init {
-        // ✅ Track screen view
         trackScreenView()
     }
 
     /**
-     * ✅ Track screen view
+     * Track screen view
      */
     private fun trackScreenView() {
         analyticsHelper.logScreenView(
@@ -79,20 +75,20 @@ class LullabyViewModel @Inject constructor(
         )
     }
 
-    // ✅ MVI FIX: Combine base state + session unlocks + billing status into single state
+    // ✅ MVI: Combine base state + session unlocks + billing status + ad state
     val lullabyUiState: StateFlow<LullabyUiState> = combine(
         _lullabyUiState,
         sessionUnlockManager.unlockedItems,
-        billingManager.isPurchased  // ✅ Add premium status to state
-    ) { baseState, unlockedIds, isPremium ->
-        // ✅ Debug: Log state combination
+        billingManager.isPurchased,
+        adManager.adState  // ✅ Get ad state from manager
+    ) { baseState, unlockedIds, isPremium, adState ->
         Log.d("LullabyViewModel", "🔄 State combine - UnlockedIds: $unlockedIds, isPremium: $isPremium")
 
-        // ✅ If base state is Content, merge with unlocked IDs AND premium status
         if (baseState is LullabyUiState.Content) {
             val newState = baseState.copy(
                 adUnlockedIds = unlockedIds,
-                isPremium = isPremium  // ✅ MVI: Single source of truth
+                isPremium = isPremium,
+                adState = adState  // ✅ Use ad state from manager
             )
             Log.d("LullabyViewModel", "✅ Updated state: ${unlockedIds.size} unlocked, premium=$isPremium")
             newState
@@ -101,34 +97,28 @@ class LullabyViewModel @Inject constructor(
             baseState
         }
     }.onStart {
-        initializeAds()
-
-        loadBannerAd(
+        // ✅ SRP FIX: Delegate ad initialization to manager
+        adManager.initializeAds()
+        adManager.loadBannerAd(
             adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
-            adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER
+            adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER,
+            placement = "lullaby_screen"
         )
-
-        // Preload rewarded ad for lullaby unlock
-        loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)
+        adManager.loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)
 
         fetchLullabyData()
-
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LullabyUiState.IsLoading)
 
-
-
-    // ✅ NEW: Expose network state for UI like MainViewModel
+    // Expose network state for UI
     val isNetworkAvailable: StateFlow<Boolean> = internetConnectionManager.isNetworkAvailable
 
-    // ✅ Expose currently playing lullaby ID from MusicController
+    // Expose currently playing lullaby ID from MusicController
     val currentlyPlayingLullabyId: StateFlow<String?> = combine(
         musicController.currentAudioItem,
         musicController.isPlaying
     ) { audioItem, isPlaying ->
-        // ✅ UPDATED: Show border if audio is loaded (regardless of playing/paused state)
-        // Border will disappear only when audio is stopped (currentAudioItem = null)
         val result = if (audioItem?.isFromStory == false) {
-            audioItem.documentId // ✅ Show border for lullabies (playing OR paused)
+            audioItem.documentId
         } else {
             null
         }
@@ -143,42 +133,24 @@ class LullabyViewModel @Inject constructor(
         initialValue = null
     )
 
-    // ❌ REMOVED: Separate isPurchased StateFlow - now part of lullabyUiState
-    // This follows pure MVI pattern: single source of truth
-
     init {
         Log.d("LullabyViewModel", "🚀 ViewModel initialized")
 
-        // ✅ MVI FIX: Initialize ads based on combined state (wait for billing + content)
+        // Monitor network for ad loading via manager
         viewModelScope.launch {
-            var adsInitialized = false  // ✅ FIX: Prevent infinite ad loading loop
+            var adsInitialized = false
             lullabyUiState.collect { state ->
                 if (state is LullabyUiState.Content) {
                     Log.d("LullabyViewModel", "💳 State updated - isPremium: ${state.isPremium}")
 
-                    if (!state.isPremium) {
-                        // ✅ Initialize AdMob SDK once
-                        if (!adsInitialized) {
-                            Log.d("LullabyViewModel", "📢 Free user - Initializing ads")
-                            initializeAds()
-                            // Start monitoring network for ad loading
-                            monitorNetworkForAdLoading()
-                            adsInitialized = true  // ✅ Mark as initialized
-                        }
-
-                        // ✅ Reload banner ad if missing (handles back navigation)
-                        val bannerAd = state.adState.bannerAd
-                        if (internetConnectionManager.isCurrentlyConnected() &&
-                            (bannerAd == null || (!bannerAd.isLoaded && !bannerAd.isLoading))) {
-                            Log.d("LullabyViewModel", "🔄 Banner ad missing - Reloading")
-                            loadBannerAd(
-                                adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
-                                adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER
-                            )
-                        }
-                    } else {
+                    if (!state.isPremium && !adsInitialized) {
+                        Log.d("LullabyViewModel", "📢 Free user - Initializing ads via manager")
+                        adManager.initializeAds()
+                        monitorNetworkForAdLoading()
+                        adsInitialized = true
+                    } else if (state.isPremium) {
                         Log.d("LullabyViewModel", "🏆 Premium user - Skipping all ad initialization")
-                        adsInitialized = true  // ✅ Mark as initialized even for premium
+                        adsInitialized = true
                     }
                 }
             }
@@ -188,51 +160,44 @@ class LullabyViewModel @Inject constructor(
     fun handleIntent(lullabyIntent: LullabyIntent) {
         when (lullabyIntent) {
             is LullabyIntent.FetchLullabies -> fetchLullabyData()
-            is LullabyIntent.DownloadLullabyItem -> downloadLullaby(
-                lullabyIntent.lullabyItem
-            )
-
+            is LullabyIntent.DownloadLullabyItem -> downloadLullaby(lullabyIntent.lullabyItem)
             is LullabyIntent.ChangeCategory -> changeCategory(lullabyIntent.category)
-            // AdMob intents
-            is LullabyIntent.InitializeAds -> initializeAds()
-            is LullabyIntent.LoadBannerAd -> loadBannerAd(
-                lullabyIntent.adUnitId,
-                lullabyIntent.adSizeType
-            )
 
-            is LullabyIntent.DestroyBannerAd -> destroyBannerAd(lullabyIntent.adUnitId)
-            // Rewarded Ad intents  
-            is LullabyIntent.LoadRewardedAd -> loadRewardedAd(lullabyIntent.adUnitId)
-            is LullabyIntent.ShowRewardedAd -> showRewardedAd(
-                lullabyIntent.adUnitId, 
-                lullabyIntent.activity,
-                lullabyIntent.lullaby
+            // ✅ SRP FIX: Delegate ad intents to manager
+            is LullabyIntent.InitializeAds -> adManager.initializeAds()
+            is LullabyIntent.LoadBannerAd -> adManager.loadBannerAd(
+                adUnitId = lullabyIntent.adUnitId,
+                adSizeType = lullabyIntent.adSizeType,
+                placement = "lullaby_screen"
+            )
+            is LullabyIntent.DestroyBannerAd -> adManager.destroyBannerAd(lullabyIntent.adUnitId)
+            is LullabyIntent.LoadRewardedAd -> adManager.loadRewardedAd(lullabyIntent.adUnitId)
+            is LullabyIntent.ShowRewardedAd -> adManager.showRewardedAd(
+                adUnitId = lullabyIntent.adUnitId,
+                activity = lullabyIntent.activity,
+                content = ContentInfo.fromLullaby(lullabyIntent.lullaby),
+                sourceScreen = "lullaby_screen"
             )
         }
     }
 
-    private fun downloadLullaby(
-        lullabyItem: LullabyDomainModel
-    ) {
-        // ✅ CHECK: Internet connection before download
+    private fun downloadLullaby(lullabyItem: LullabyDomainModel) {
+        // CHECK: Internet connection before download
         if (!internetConnectionManager.checkNetworkAndShowToast()) {
             Log.d("LullabyViewModel", "❌ No internet connection - Download cancelled for: ${lullabyItem.documentId}")
             return
         }
-        
-        // ✅ CHECK: Prevent re-download if already downloading
+
+        // CHECK: Prevent re-download if already downloading
         val currentState = _lullabyUiState.value as? LullabyUiState.Content
         if (currentState != null && lullabyItem.documentId in currentState.downloadingItems) {
             Log.d("LullabyViewModel", "⚠️ Download already in progress for: ${lullabyItem.documentId}")
-            return // Don't start duplicate download
+            return
         }
-        
-        Log.e(
-            "LullabyViewModel",
-            "📁 Starting download for: ${lullabyItem.musicName} (ID: ${lullabyItem.documentId})"
-        )
 
-        // ✅ Analytics: Track download started
+        Log.e("LullabyViewModel", "📁 Starting download for: ${lullabyItem.musicName} (ID: ${lullabyItem.documentId})")
+
+        // Analytics: Track download started
         val downloadStartTime = System.currentTimeMillis()
         analyticsHelper.logDownloadStarted(
             contentType = "lullaby",
@@ -246,31 +211,23 @@ class LullabyViewModel @Inject constructor(
                 downloaLullabyUsecase(lullabyItem).collect { result ->
                     Log.e("LullabyViewModel", "📊 Download result: $result")
 
-                    // ✅ Safe state update with proper copying
                     val currentState = _lullabyUiState.value as? LullabyUiState.Content ?: run {
-                        Log.w(
-                            "LullabyViewModel",
-                            "Cannot update download state - UI not in Content state"
-                        )
+                        Log.w("LullabyViewModel", "Cannot update download state - UI not in Content state")
                         return@collect
                     }
 
                     val updatedState = when (result) {
                         is DownloadLullabyResult.Progress -> {
-                            Log.e(
-                                "LullabyViewModel",
-                                "📈 Progress: ${result.progressPercentige}% for ${lullabyItem.documentId}"
-                            )
+                            Log.e("LullabyViewModel", "📈 Progress: ${result.progressPercentige}% for ${lullabyItem.documentId}")
                             currentState.copy(
-                                downloadingItems = currentState.downloadingItems + lullabyItem.documentId,  // ✅ Create new set
-                                downloadProgress = currentState.downloadProgress + (lullabyItem.documentId to result.progressPercentige)  // ✅ Create new map
+                                downloadingItems = currentState.downloadingItems + lullabyItem.documentId,
+                                downloadProgress = currentState.downloadProgress + (lullabyItem.documentId to result.progressPercentige)
                             )
                         }
 
                         is DownloadLullabyResult.Completed -> {
                             Log.e("LullabyViewModel", "✅ Download completed for: ${lullabyItem.documentId}")
 
-                            // ✅ Analytics: Track download completed
                             val downloadDuration = System.currentTimeMillis() - downloadStartTime
                             analyticsHelper.logDownloadCompleted(
                                 contentType = "lullaby",
@@ -279,7 +236,6 @@ class LullabyViewModel @Inject constructor(
                                 downloadTimeMs = downloadDuration
                             )
 
-                            // ✅ Show download completion toast
                             Toast.makeText(
                                 context,
                                 "✅ ${lullabyItem.musicName} downloaded successfully!",
@@ -287,19 +243,15 @@ class LullabyViewModel @Inject constructor(
                             ).show()
 
                             currentState.copy(
-                                downloadingItems = currentState.downloadingItems - lullabyItem.documentId,  // ✅ Remove from downloading
-                                downloadedItems = currentState.downloadedItems + lullabyItem.documentId,    // ✅ Add to downloaded
-                                downloadProgress = currentState.downloadProgress - lullabyItem.documentId   // ✅ Remove progress
+                                downloadingItems = currentState.downloadingItems - lullabyItem.documentId,
+                                downloadedItems = currentState.downloadedItems + lullabyItem.documentId,
+                                downloadProgress = currentState.downloadProgress - lullabyItem.documentId
                             )
                         }
 
                         is DownloadLullabyResult.Error -> {
-                            Log.e(
-                                "LullabyViewModel",
-                                "❌ Download failed for ${lullabyItem.documentId}: ${result.message}"
-                            )
+                            Log.e("LullabyViewModel", "❌ Download failed for ${lullabyItem.documentId}: ${result.message}")
 
-                            // ✅ Analytics: Track download failed
                             analyticsHelper.logDownloadFailed(
                                 contentType = "lullaby",
                                 contentId = lullabyItem.documentId,
@@ -307,20 +259,15 @@ class LullabyViewModel @Inject constructor(
                             )
 
                             currentState.copy(
-                                downloadingItems = currentState.downloadingItems - lullabyItem.documentId,  // ✅ Remove from downloading
-                                downloadProgress = currentState.downloadProgress - lullabyItem.documentId,  // ✅ Remove progress
-                                downloadError = currentState.downloadError + (lullabyItem.documentId to Throwable(
-                                    result.message
-                                ))  // ✅ Add error
+                                downloadingItems = currentState.downloadingItems - lullabyItem.documentId,
+                                downloadProgress = currentState.downloadProgress - lullabyItem.documentId,
+                                downloadError = currentState.downloadError + (lullabyItem.documentId to Throwable(result.message))
                             )
                         }
                     }
 
                     _lullabyUiState.value = updatedState
-                    Log.e(
-                        "LullabyViewModel",
-                        "🔄 State updated - Downloaded items: ${updatedState.downloadedItems}"
-                    )
+                    Log.e("LullabyViewModel", "🔄 State updated - Downloaded items: ${updatedState.downloadedItems}")
                 }
             } catch (e: Exception) {
                 Log.e("LullabyViewModel", "💥 Download coroutine failed: ${e.message}")
@@ -336,18 +283,14 @@ class LullabyViewModel @Inject constructor(
 
             fetchLullabiesUseCase()
                 .collect { response ->
-                    // ✅ Preserve current category when updating lullabies
-                    val currentCategory =
-                        (_lullabyUiState.value as? LullabyUiState.Content)?.currentCategory
+                    val currentCategory = (_lullabyUiState.value as? LullabyUiState.Content)?.currentCategory
                             ?: LullabyCategory.ALL
 
-                    // ✅ Preserve current ad state when updating lullabies
                     val currentState = _lullabyUiState.value as? LullabyUiState.Content
 
-                    // ✅ ULTRA OPTIMIZED: No translation processing needed - database handles it!
                     Log.d("LullabyViewModel", "🚀 Database-optimized lullabies received: ${response.size}")
 
-                    // ✅ Pre-filter Popular and Free lists ONCE when data loads
+                    // Pre-filter Popular and Free lists ONCE when data loads
                     val popularLullabies = response.filter { it.popularity_count > 0 }
                     val freeLullabies = response.filter { it.isFree }
 
@@ -355,7 +298,6 @@ class LullabyViewModel @Inject constructor(
                     Log.d("LullabyViewModel", "📊 Popular: ${popularLullabies.size} items")
                     Log.d("LullabyViewModel", "🆓 Free: ${freeLullabies.size} items")
 
-                    // ✅ Set initial filteredLullabies based on current category
                     val initialFilteredLullabies = when (currentCategory) {
                         LullabyCategory.ALL -> response
                         LullabyCategory.POPULAR -> popularLullabies
@@ -363,14 +305,14 @@ class LullabyViewModel @Inject constructor(
                     }
 
                     _lullabyUiState.value = LullabyUiState.Content(
-                        lullabies = response, // ✅ Direct use - already database-optimized
+                        lullabies = response,
                         filteredLullabies = initialFilteredLullabies,
                         popularLullabies = popularLullabies,
                         freeLullabies = freeLullabies,
                         currentCategory = currentCategory,
-                        // ✅ FIXED: Preserve AdState properly to prevent ad reload
+                        // ✅ SRP FIX: Ad state managed by AdManager
                         adState = currentState?.adState ?: AdUiState(),
-                        // ✅ DEPRECATED: Keep for backward compatibility
+                        // Backward compatibility fields
                         bannerAd = currentState?.bannerAd,
                         isAdInitialized = currentState?.isAdInitialized ?: false,
                         rewardedAd = currentState?.rewardedAd,
@@ -380,12 +322,7 @@ class LullabyViewModel @Inject constructor(
                     )
                     Log.e("LullabyViewModel", "🎉 LullabyViewModel: SUCCESS! Data received!")
                     Log.e("LullabyViewModel", "📊 Response preview: ${response.take(100)}...")
-                    Log.e(
-                        "LullabyViewModel",
-                        "✅ All layers working correctly - check detailed logs above!"
-                    )
                 }
-
         }
     }
 
@@ -402,7 +339,7 @@ class LullabyViewModel @Inject constructor(
             return
         }
 
-        // ✅ ULTRA FAST - Use pre-filtered lists (no filtering needed!)
+        // ULTRA FAST - Use pre-filtered lists
         val filteredLullabies = when (category) {
             LullabyCategory.ALL -> {
                 Log.d("LullabyViewModel", "✅ ALL category - showing all ${currentState.lullabies.size} lullabies")
@@ -418,350 +355,44 @@ class LullabyViewModel @Inject constructor(
             }
         }
 
-        // ✅ Instant UI update - just reference switching!
         _lullabyUiState.value = currentState.copy(
             currentCategory = category,
             filteredLullabies = filteredLullabies
         )
     }
 
-    // AdMob related methods
-    private fun initializeAds() {
-        Log.d("LullabyViewModel", "🚀 Initializing AdMob SDK...")
-        viewModelScope.launch {
-            try {
-                initializeAdMobUseCase()
-
-                val currentState = _lullabyUiState.value as? LullabyUiState.Content
-                if (currentState != null) {
-                    _lullabyUiState.value = currentState.copy(
-                        adState = currentState.adState.copy(isAdInitialized = true)
-                    )
-                    Log.d("LullabyViewModel", "✅ AdMob initialized successfully")
-                }
-            } catch (e: Exception) {
-                Log.e("LullabyViewModel", "❌ AdMob initialization failed: ${e.message}", e)
-            }
-        }
-    }
-
-    private fun loadBannerAd(
-        adUnitId: String,
-        adSizeType: com.naptune.lullabyandstory.domain.model.AdSizeType
-    ) {
-        // 🏆 Skip ad loading for premium users
-        // ✅ MVI FIX: Get premium status from current state
-        val currentState = lullabyUiState.value
-        if (currentState is LullabyUiState.Content && currentState.isPremium) {
-            Log.d("LullabyViewModel", "🏆 Premium user - Skipping banner ad load")
-            return
-        }
-
-        Log.d("LullabyViewModel", "📢 Loading banner ad - Unit: $adUnitId, Size: $adSizeType")
-        viewModelScope.launch {
-            try {
-                loadBannerAdUseCase(adUnitId, adSizeType).collect { result ->
-                    val currentState = _lullabyUiState.value as? LullabyUiState.Content
-                    if (currentState != null) {
-                        when (result) {
-                            is AdLoadResult.Loading -> {
-                                Log.d("LullabyViewModel", "⏳ Banner ad loading...")
-                                val defaultHeight = when (adSizeType) {
-                                    com.naptune.lullabyandstory.domain.model.AdSizeType.ANCHORED_ADAPTIVE_BANNER -> 90 // Adaptive height
-                                    com.naptune.lullabyandstory.domain.model.AdSizeType.LARGE_BANNER -> 100
-                                    else -> 50
-                                }
-
-                                val loadingAd =
-                                    currentState.adState.bannerAd?.copy(isLoading = true, error = null)
-                                        ?: com.naptune.lullabyandstory.domain.model.BannerAdDomainModel(
-                                            adUnitId = adUnitId,
-                                            adSize = com.naptune.lullabyandstory.domain.model.AdSize(
-                                                width = -1, // Full width for adaptive
-                                                height = defaultHeight,
-                                                type = adSizeType
-                                            ),
-                                            isLoading = true
-                                        )
-                                _lullabyUiState.value = currentState.copy(
-                                    adState = currentState.adState.copy(bannerAd = loadingAd)
-                                )
-                            }
-
-                            is AdLoadResult.Success -> {
-                                Log.d("LullabyViewModel", "✅ Banner ad loaded successfully")
-                                _lullabyUiState.value = currentState.copy(
-                                    adState = currentState.adState.copy(bannerAd = result.bannerAd)
-                                )
-                            }
-
-                            is AdLoadResult.Error -> {
-                                Log.e(
-                                    "LullabyViewModel",
-                                    "❌ Banner ad load failed: ${result.message}"
-                                )
-                                val defaultHeight = when (adSizeType) {
-                                    com.naptune.lullabyandstory.domain.model.AdSizeType.ANCHORED_ADAPTIVE_BANNER -> 90
-                                    com.naptune.lullabyandstory.domain.model.AdSizeType.LARGE_BANNER -> 100
-                                    else -> 50
-                                }
-
-                                val errorAd = currentState.adState.bannerAd?.copy(
-                                    isLoading = false,
-                                    isLoaded = false,
-                                    error = result.message
-                                ) ?: com.naptune.lullabyandstory.domain.model.BannerAdDomainModel(
-                                    adUnitId = adUnitId,
-                                    adSize = com.naptune.lullabyandstory.domain.model.AdSize(
-                                        width = -1, // Full width for adaptive
-                                        height = defaultHeight,
-                                        type = adSizeType
-                                    ),
-                                    isLoading = false,
-                                    isLoaded = false,
-                                    error = result.message
-                                )
-                                _lullabyUiState.value = currentState.copy(
-                                    adState = currentState.adState.copy(bannerAd = errorAd)
-                                )
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("LullabyViewModel", "💥 Banner ad loading exception: ${e.message}", e)
-            }
-        }
-    }
-
-    private fun destroyBannerAd(adUnitId: String) {
-        Log.d("LullabyViewModel", "🗑️ Destroying banner ad - Unit: $adUnitId")
-        viewModelScope.launch {
-            try {
-                destroyBannerAdUseCase(adUnitId)
-
-                val currentState = _lullabyUiState.value as? LullabyUiState.Content
-                if (currentState != null) {
-                    _lullabyUiState.value = currentState.copy(
-                        adState = currentState.adState.copy(bannerAd = null)
-                    )
-                    Log.d("LullabyViewModel", "✅ Banner ad destroyed successfully")
-                }
-            } catch (e: Exception) {
-                Log.e("LullabyViewModel", "❌ Banner ad destruction failed: ${e.message}", e)
-            }
-        }
-    }
-
-    // Rewarded Ad functionality
-    private fun loadRewardedAd(adUnitId: String) {
-        // 🏆 Skip ad loading for premium users
-        // ✅ MVI FIX: Get premium status from current state
-        val currentState = lullabyUiState.value
-        if (currentState is LullabyUiState.Content && currentState.isPremium) {
-            Log.d("LullabyViewModel", "🏆 Premium user - Skipping rewarded ad load")
-            return
-        }
-
-        Log.d("LullabyViewModel", "🎁 Loading rewarded ad: $adUnitId")
-        viewModelScope.launch {
-            try {
-                loadRewardedAdUseCase(adUnitId).collect { result ->
-                    val currentState = _lullabyUiState.value as? LullabyUiState.Content
-                    if (currentState != null) {
-                        when (result) {
-                            is RewardedAdLoadResult.Loading -> {
-                                Log.d("LullabyViewModel", "⏳ Rewarded ad loading...")
-                                _lullabyUiState.value = currentState.copy(
-                                    isLoadingRewardedAd = true,
-                                    rewardedAdError = null
-                                )
-                            }
-                            
-                            is RewardedAdLoadResult.Success -> {
-                                Log.d("LullabyViewModel", "✅ Rewarded ad loaded successfully")
-                                _lullabyUiState.value = currentState.copy(
-                                    rewardedAd = result.rewardedAd,
-                                    isLoadingRewardedAd = false,
-                                    rewardedAdError = null
-                                )
-                            }
-                            
-                            is RewardedAdLoadResult.Error -> {
-                                Log.e("LullabyViewModel", "❌ Rewarded ad load failed: ${result.message}")
-                                _lullabyUiState.value = currentState.copy(
-                                    isLoadingRewardedAd = false,
-                                    rewardedAdError = result.message
-                                )
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("LullabyViewModel", "💥 Exception loading rewarded ad: ${e.message}", e)
-                val currentState = _lullabyUiState.value as? LullabyUiState.Content
-                if (currentState != null) {
-                    _lullabyUiState.value = currentState.copy(
-                        isLoadingRewardedAd = false,
-                        rewardedAdError = e.message ?: "Unknown error"
-                    )
-                }
-            }
-        }
-    }
-
-    private fun showRewardedAd(adUnitId: String, activity: android.app.Activity, lullaby: LullabyDomainModel) {
-        Log.d("LullabyViewModel", "🎬 Showing rewarded ad: $adUnitId for lullaby: ${lullaby.musicName}")
-
-        // ✅ Check if ad is available
-        if (!checkRewardedAdAvailabilityUseCase(adUnitId)) {
-            Log.w("LullabyViewModel", "❌ Rewarded ad not available, loading new ad...")
-            loadRewardedAd(adUnitId)
-            Toast.makeText(activity, "Loading ad, please try again in a moment", Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        viewModelScope.launch {
-            try {
-                showRewardedAdUseCase(adUnitId, activity).collect { result ->
-                    val currentState = _lullabyUiState.value as? LullabyUiState.Content
-                    if (currentState != null) {
-                        when (result) {
-                            is RewardedAdShowResult.Loading -> {
-                                Log.d("LullabyViewModel", "🎬 Showing rewarded ad...")
-                                _lullabyUiState.value = currentState.copy(
-                                    lastRewardedLullaby = lullaby
-                                )
-                            }
-                            
-                            is RewardedAdShowResult.Success -> {
-                                Log.d("LullabyViewModel", "🎁 User earned reward: ${result.reward}")
-                                _lullabyUiState.value = currentState.copy(
-                                    lastRewardedLullaby = lullaby,
-                                    rewardedAd = null // Ad consumed, need to reload
-                                )
-                                
-                                // TODO: Handle reward logic here (unlock lullaby, grant premium access, etc.)
-                                handleRewardEarned(lullaby, result.reward)
-                                
-                                // Preload next rewarded ad
-                                loadRewardedAd(adUnitId)
-                            }
-                            
-                            is RewardedAdShowResult.Dismissed -> {
-                                Log.d("LullabyViewModel", "🚪 Rewarded ad dismissed: ${result.reason}")
-                                _lullabyUiState.value = currentState.copy(
-                                    rewardedAd = null // Ad consumed, need to reload
-                                )
-                                
-                                // Preload next rewarded ad
-                                loadRewardedAd(adUnitId)
-                            }
-                            
-                            is RewardedAdShowResult.Error -> {
-                                Log.e("LullabyViewModel", "❌ Rewarded ad show failed: ${result.message}")
-                                _lullabyUiState.value = currentState.copy(
-                                    rewardedAdError = result.message
-                                )
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("LullabyViewModel", "💥 Exception showing rewarded ad: ${e.message}", e)
-                val currentState = _lullabyUiState.value as? LullabyUiState.Content
-                if (currentState != null) {
-                    _lullabyUiState.value = currentState.copy(
-                        rewardedAdError = e.message ?: "Unknown error"
-                    )
-                }
-            }
-        }
-    }
-
-    private fun handleRewardEarned(lullaby: LullabyDomainModel, reward: com.naptune.lullabyandstory.domain.model.RewardDomainModel) {
-        Log.d("LullabyViewModel", "🎉 Processing reward for lullaby: ${lullaby.musicName}")
-        Log.d("LullabyViewModel", "🎁 Reward: ${reward.type} - ${reward.amount}")
-        Log.d("LullabyViewModel", "📋 Lullaby documentId: ${lullaby.documentId}")
-
-        // ✅ NEW: Unlock lullaby for current session via SessionUnlockManager
-        sessionUnlockManager.unlockItem(
-            itemId = lullaby.documentId,
-            itemType = com.naptune.lullabyandstory.data.manager.UnlockType.Lullaby
-        )
-
-        // ✅ Debug: Verify unlock was successful
-        val isNowUnlocked = sessionUnlockManager.isItemUnlocked(lullaby.documentId)
-        val totalUnlocked = sessionUnlockManager.getUnlockCount()
-        Log.d("LullabyViewModel", "✅ Lullaby unlocked for session: ${lullaby.musicName}")
-        Log.d("LullabyViewModel", "🔓 Unlock verified: $isNowUnlocked")
-        Log.d("LullabyViewModel", "📊 Total unlocked items: $totalUnlocked")
-        Log.d("LullabyViewModel", "📜 All unlocked IDs: ${sessionUnlockManager.getUnlockedItems()}")
-
-        // Show success toast
-        Toast.makeText(
-            context,
-            "🎁 ${lullaby.musicName} unlocked for this session!",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-
+    /**
+     * Check if rewarded ad is available
+     * ✅ SRP FIX: Delegate to manager
+     */
     fun isRewardedAdAvailable(adUnitId: String = AdMobDataSource.TEST_REWARDED_AD_UNIT_ID): Boolean {
-        return checkRewardedAdAvailabilityUseCase(adUnitId)
+        return adManager.isRewardedAdAvailable(adUnitId)
     }
 
     /**
-     * ✅ Monitor network changes and automatically handle banner ad loading/hiding
+     * Monitor network changes and automatically handle banner ad loading
+     * ✅ SRP FIX: Simplified - manager handles the details
      */
     private fun monitorNetworkForAdLoading() {
         viewModelScope.launch {
             internetConnectionManager.isNetworkAvailable.collect { isConnected ->
                 Log.d("LullabyViewModel", "🌐 Network state changed: $isConnected")
-                
-                // ✅ Handle banner ad loading based on network state
-                handleBannerAdNetworkState(isConnected)
-            }
-        }
-    }
 
-    /**
-     * ✅ Handle banner ad loading/hiding based on network connectivity
-     */
-    private fun handleBannerAdNetworkState(isConnected: Boolean) {
-        Log.d("LullabyViewModel", "📢 Handling banner ad network state: $isConnected")
-        
-        val currentState = _lullabyUiState.value as? LullabyUiState.Content
-        if (currentState != null) {
-            if (isConnected) {
-                // ✅ Network available - check if ad needs to be loaded
-                val bannerAd = currentState.adState.bannerAd
-                if (bannerAd == null || (!bannerAd.isLoaded && !bannerAd.isLoading)) {
-                    Log.d("LullabyViewModel", "🚀 Network available - Starting banner ad load")
-                    loadBannerAd(
+                if (isConnected) {
+                    // Network available - manager will handle loading
+                    adManager.loadBannerAd(
                         adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
-                        adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER
+                        adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER,
+                        placement = "lullaby_screen"
                     )
-                } else {
-                    Log.d("LullabyViewModel", "✅ Banner ad already loaded or loading")
                 }
-            } else {
-                // ✅ Network not available - clear ad state
-                Log.d("LullabyViewModel", "❌ Network not available - Clearing banner ad state")
-                _lullabyUiState.value = currentState.copy(
-                    adState = currentState.adState.copy(bannerAd = null)
-                )
             }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        // ⚠️ IMPORTANT: Do NOT destroy banner ad here!
-        // Banner ads use shared adUnitId stored in AdMobDataSource singleton.
-        // Destroying here would also destroy MainScreen's banner ad,
-        // causing it to vanish when user navigates back to Home.
-        // The ad will be recreated when user navigates to this screen again.
-        Log.d("LullabyViewModel", "🧹 ViewModel cleared - Banner ad preserved (shared with MainScreen)")
+        Log.d("LullabyViewModel", "🧹 ViewModel cleared - Ad manager handles cleanup")
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -784,7 +415,6 @@ class LullabyViewModel @Inject constructor(
                 isDownloaded = isDownloaded
             )
 
-            // ✅ Analytics: Track offline content usage
             if (isDownloaded) {
                 analyticsHelper.logDownloadedContentPlayed(
                     contentType = "lullaby",
