@@ -57,7 +57,7 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel(),
     onNavigateToStoryManager: (StoryDomainModel) -> Unit,
     // ✅ NEW: Dynamic content padding based on mini controller
-    contentBottomPadding: androidx.compose.ui.unit.Dp = 0.dp
+    contentBottomPadding: Dp = 0.dp
 ) {
     val systemUiController = rememberSystemUiController()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

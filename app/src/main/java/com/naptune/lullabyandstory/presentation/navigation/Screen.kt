@@ -1,7 +1,12 @@
 package com.naptune.lullabyandstory.presentation.navigation
 
+import android.net.Uri
 import androidx.annotation.DrawableRes
+import androidx.compose.ui.text.LinkAnnotation
+import com.google.gson.Gson
 import com.naptune.lullabyandstory.R
+import com.naptune.lullabyandstory.domain.model.StoryDomainModel
+import io.appwrite.extensions.toJson
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -13,9 +18,10 @@ sealed class Screen(val route: String) {
     object Debug : Screen("debug") // ✅ NEW: Debug screen
     object Explore : Screen("explore") // ✅ NEW: Explore screen with Lullaby/Story tabs
 
-    object StoryManager : Screen("read_manager/{storyId}/{storyName}/{storyDescription}/{imagePath}/{storyAudioPath}/{storyLength}/{documentId}/{isFavourite}")
+   // object StoryManager : Screen("read_manager/{storyId}/{storyName}/{storyDescription}/{imagePath}/{storyAudioPath}/{storyLength}/{documentId}/{isFavourite}")
+    object StoryManager : Screen("read_manager/{storyJson}")
     {
-        fun createRoute(
+ /*       fun createRoute(
             storyId: String,
             storyName: String,
             storyDescription: String,
@@ -34,10 +40,16 @@ sealed class Screen(val route: String) {
             val safeDocumentId = documentId.ifEmpty { "unknown" }
 
             return "read_manager/$safeStoryId/$encodedStoryName/$encodedStoryDescription/$encodedImagePath/$encodedStoryAudioPath/$encodedStoryLength/$safeDocumentId/$isFavourite"
+        }*/
+
+        fun createJsonRoute(storyDomainModel: StoryDomainModel): String {
+
+            val storyJson = Uri.encode(Gson().toJson(storyDomainModel))
+            return "read_manager/$storyJson"
         }
     }
 
-    object StoryReader : Screen("story_reader/{storyId}/{storyName}/{storyDescription}/{imagePath}/{documentId}/{isFavourite}") {
+    object StoryReader : Screen("story_reader/{storyJson}") {
         fun createRoute(
             storyId: String,
             storyName: String,
@@ -54,6 +66,12 @@ sealed class Screen(val route: String) {
             
             return "story_reader/$safeStoryId/$encodedStoryName/$encodedStoryDescription/$encodedImagePath/$safeDocumentId/$isFavourite"
         }
+
+        fun createJsonRoute(storyDomainModel: StoryDomainModel): String {
+            val encode = Uri.encode(Gson().toJson(storyDomainModel))
+            return "story_reader/$encode"
+        }
+
     }
     // New content screens
     object Lullaby : Screen("lullaby")

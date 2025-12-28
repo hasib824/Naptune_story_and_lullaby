@@ -1,5 +1,6 @@
 package com.naptune.lullabyandstory.presentation.navigation
 
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.google.gson.Gson
 import com.naptune.lullabyandstory.R
 import com.naptune.lullabyandstory.data.billing.BillingManager
 import com.naptune.lullabyandstory.domain.model.StoryDomainModel
@@ -197,14 +199,8 @@ fun NaptuneNavigation(
                                     )
                                 },
                                 onNavigateToStoryManager = { storyItem ->
-                                    val route = Screen.StoryManager.createRoute(
-                                        storyId = storyItem.id,
-                                        storyName = storyItem.storyName,
-                                        storyDescription = storyItem.storyDescription,
-                                        imagePath = storyItem.imagePath,
-                                        documentId = storyItem.documentId,
-                                        storyAudioPath = storyItem.storyAudioPath,
-                                        storyLength = storyItem.story_reading_time
+                                    val route = Screen.StoryManager.createJsonRoute(
+                                        storyItem
                                     )
                                     navController.navigate(route)
                                 },
@@ -216,7 +212,7 @@ fun NaptuneNavigation(
                 }
 
                 // ✅ NEW: Explore Screen with Lullaby/Story tabs
-                composable(Screen.Explore.route) {
+     /*           composable(Screen.Explore.route) {
                     MainLayout(
                         navController = navController,
                         currentScreen = Screen.Explore.route,
@@ -252,7 +248,7 @@ fun NaptuneNavigation(
                             )
                         }
                     )
-                }
+                }*/
 
                 composable(Screen.Favourite.route) {
                     MainLayout(
@@ -291,6 +287,8 @@ fun NaptuneNavigation(
                                 },
                                 // ✅ NEW: Story manager navigation (same pattern as MainScreen)
                                 onNavigateToStoryManager = { storyItem ->
+
+                                    /*
                                     val route = Screen.StoryManager.createRoute(
                                         storyId = storyItem.id,
                                         storyName = storyItem.storyName,
@@ -300,6 +298,9 @@ fun NaptuneNavigation(
                                         storyAudioPath = storyItem.storyAudioPath,
                                         storyLength = storyItem.story_reading_time
                                     )
+                                    */
+
+                                    val route = Screen.StoryManager.createJsonRoute(storyItem)
                                     navController.navigate(route)
                                 },
                                 // ✅ NEW: Pass dynamic content padding
@@ -432,7 +433,7 @@ fun NaptuneNavigation(
                                 navController = navController,
                                 onStroyItemClick = { storyItem ->
 
-                                    val route = Screen.StoryManager.createRoute(
+                                   /* val route = Screen.StoryManager.createRoute(
                                         storyId = storyItem.id,
                                         storyName = storyItem.storyName,
                                         storyDescription = storyItem.storyDescription,
@@ -440,8 +441,9 @@ fun NaptuneNavigation(
                                         documentId = storyItem.documentId,
                                         storyAudioPath = storyItem.storyAudioPath,
                                         storyLength = storyItem.story_reading_time,
-                                    )
+                                    )*/
 
+                                    val route = Screen.StoryManager.createJsonRoute(storyItem)
                                     navController.navigate(route)
                                 },
                                 contentBottomPadding = contentBottomPadding
@@ -453,28 +455,28 @@ fun NaptuneNavigation(
 
                 composable(
                     Screen.StoryManager.route, arguments = listOf(
-                        navArgument("storyId") { type = NavType.StringType },
-                        navArgument("storyName") { type = NavType.StringType },
+                        navArgument("storyJson") { type = NavType.StringType },
+                      /*  navArgument("storyName") { type = NavType.StringType },
                         navArgument("storyDescription") { type = NavType.StringType },
                         navArgument("imagePath") { type = NavType.StringType },
                         navArgument("documentId") { type = NavType.StringType },
                         navArgument("storyAudioPath") { type = NavType.StringType },
-                        navArgument("storyLength") { type = NavType.StringType },
+                        navArgument("storyLength") { type = NavType.StringType },*/
                     )
                 ) { backStackEntry ->
-                    val storyId = backStackEntry.arguments?.getString("storyId") ?: "1"
+                   /* val storyId = backStackEntry.arguments?.getString("storyId") ?: "1"
                     val storyName = backStackEntry.arguments?.getString("storyName") ?: ""
                     val storyDescription =
                         backStackEntry.arguments?.getString("storyDescription") ?: ""
                     val imagePath = backStackEntry.arguments?.getString("imagePath") ?: ""
                     val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
                     val storyAudioPath = backStackEntry.arguments?.getString("storyAudioPath") ?: ""
-                    val storyLength = backStackEntry.arguments?.getString("storyLength") ?: ""
+                    val storyLength = backStackEntry.arguments?.getString("storyLength") ?: ""*/
 
                     SetStatusBarColor(
                         color = Color.Transparent,
                     )
-                    val currentStory = StoryDomainModel(
+                   /* val currentStory = StoryDomainModel(
                         id = java.net.URLDecoder.decode(storyId, "UTF-8"),
                         storyName = java.net.URLDecoder.decode(storyName, "UTF-8"),
                         storyDescription = java.net.URLDecoder.decode(storyDescription, "UTF-8"),
@@ -482,7 +484,13 @@ fun NaptuneNavigation(
                         storyAudioPath = java.net.URLDecoder.decode(storyAudioPath, "UTF-8"),
                         documentId = java.net.URLDecoder.decode(documentId, "UTF-8"),
                         story_reading_time = java.net.URLDecoder.decode(storyLength, "UTF-8"),
-                    )
+                    )*/
+
+                    val currentStory = backStackEntry.arguments?.getString("storyJson")?.let { json ->
+                        val currentStory = Gson().fromJson(json, StoryDomainModel::class.java)
+                        currentStory
+                    }
+
 
                     MainLayout(
                         navController = navController,
@@ -500,15 +508,16 @@ fun NaptuneNavigation(
                                 },
                                 onReadStoryClick = { storyItem ->
                                     // ✅ Navigate to story reader screen
-                                    val route = Screen.StoryReader.createRoute(
+                                   /* val route = Screen.StoryReader.createRoute(
                                         storyId = storyItem.id,
                                         storyName = storyItem.storyName,
                                         storyDescription = storyItem.storyDescription,
                                         imagePath = storyItem.imagePath,
                                         documentId = storyItem.documentId,
                                         isFavourite = storyItem.isFavourite
-                                    )
+                                    )*/
 
+                                    val route = Screen.StoryReader.createJsonRoute(storyItem)
                                     navController.navigate(route)
 
                                 },
@@ -542,33 +551,29 @@ fun NaptuneNavigation(
                 composable(
                     Screen.StoryReader.route,
                     arguments = listOf(
-                        navArgument("storyId") { type = NavType.StringType },
-                        navArgument("storyName") { type = NavType.StringType },
+                        navArgument("storyJson") { type = NavType.StringType },
+                       /* navArgument("storyName") { type = NavType.StringType },
                         navArgument("storyDescription") { type = NavType.StringType },
                         navArgument("imagePath") { type = NavType.StringType },
                         navArgument("documentId") { type = NavType.StringType },
-                        navArgument("isFavourite") { type = NavType.BoolType }
+                        navArgument("isFavourite") { type = NavType.BoolType }*/
                     )
                 ) { backStackEntry ->
-                    val storyId = backStackEntry.arguments?.getString("storyId") ?: ""
+
+                    val storyDoamainModel = backStackEntry.arguments?.getString("storyJson")?.let {
+                        json ->
+                        Gson().fromJson(json, StoryDomainModel::class.java)
+                    }
+                   /* val storyId = backStackEntry.arguments?.getString("storyId") ?: ""
                     val storyName = backStackEntry.arguments?.getString("storyName") ?: ""
                     val storyDescription =
                         backStackEntry.arguments?.getString("storyDescription") ?: ""
                     val imagePath = backStackEntry.arguments?.getString("imagePath") ?: ""
                     val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
-                    val isFavourite = backStackEntry.arguments?.getBoolean("isFavourite") ?: false
+                    val isFavourite = backStackEntry.arguments?.getBoolean("isFavourite") ?: false*/
 
                     // ✅ Create StoryDomainModel from URL parameters
-                    val storyFromUrl = StoryDomainModel(
-                        id = storyId,
-                        storyName = java.net.URLDecoder.decode(storyName, "UTF-8"),
-                        storyDescription = java.net.URLDecoder.decode(storyDescription, "UTF-8"),
-                        imagePath = java.net.URLDecoder.decode(imagePath, "UTF-8"),
-                        storyAudioPath = "", // Not needed for reader
-                        story_reading_time = "", // Not needed for reader
-                        documentId = documentId,
-                        isFavourite = isFavourite
-                    )
+                    val storyFromUrl = storyDoamainModel
 
                     MainLayout(
                         navController = navController,
@@ -694,7 +699,7 @@ fun NaptuneNavigation(
                             state = currentState.copy(
                                 onNavigateToStoryReader = { story ->
                                     // ✅ Simple approach: Navigate first, then hide after delay
-                                    val route = Screen.StoryReader.createRoute(
+                                 /*   val route = Screen.StoryReader.createRoute(
                                         storyId = story.id,
                                         storyName = story.storyName,
                                         storyDescription = story.storyDescription,
@@ -703,7 +708,7 @@ fun NaptuneNavigation(
                                         isFavourite = story.isFavourite
                                     )
 
-                                    navController.navigate(route)
+                                    navController.navigate(route)*/
 
                                     // ✅ Fade out animation + hide after 100ms
                                     scope.launch {
