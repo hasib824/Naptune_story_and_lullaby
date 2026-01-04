@@ -50,6 +50,14 @@ sealed class Screen(val route: String) {
     }
 
     object StoryReader : Screen("story_reader/{storyJson}") {
+
+
+        fun createJsonRoute(storyDomainModel: StoryDomainModel): String {
+            val encode = Uri.encode(Gson().toJson(storyDomainModel))
+            return "story_reader/$encode"
+        }
+
+
         fun createRoute(
             storyId: String,
             storyName: String,
@@ -67,10 +75,7 @@ sealed class Screen(val route: String) {
             return "story_reader/$safeStoryId/$encodedStoryName/$encodedStoryDescription/$encodedImagePath/$safeDocumentId/$isFavourite"
         }
 
-        fun createJsonRoute(storyDomainModel: StoryDomainModel): String {
-            val encode = Uri.encode(Gson().toJson(storyDomainModel))
-            return "story_reader/$encode"
-        }
+
 
     }
     // New content screens

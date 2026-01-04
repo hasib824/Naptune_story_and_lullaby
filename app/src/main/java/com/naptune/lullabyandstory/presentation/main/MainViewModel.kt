@@ -35,6 +35,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import com.naptune.lullabyandstory.presentation.player.service.MusicController
 import com.naptune.lullabyandstory.utils.LanguageManager
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
@@ -81,27 +82,27 @@ class MainViewModel @Inject constructor(
         MainUiState.Loading
     )
 
+    // ✅ ViewModel's single source of truth for premium status
+    private val _isPremium = MutableStateFlow(false)
 
     init {
-        Log.d("MainViewModel hasib", "🚀 ViewModel initialized")
+        Log.d("MainViewModel", "🚀 ViewModel initialized")
 
-        // ✅ Track screen view
-        trackScreenView()
+
 
         // ✅ Start monitoring network changes for automatic data sync
         monitorNetworkForDataSync()
 
-        //  seeIfPremium()
+        // ✅ BEST: Fetch data immediately for faster UI (Option 3)
+        fetchHomeData()
 
-        /*  initializeAds()
-             loadBannerAd(
-                  adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
-                  adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER
-          )
+        // ✅ Single place that manages premium status and ads
+        managePremiumStatusAndAds()
 
-          fetchHomeData()*/
-        // ✅ DEBUG: Test story debugging
-        // debugDataSources()
+        // ✅ Track screen view Analytics
+        trackScreenView()
+
+
     }
 
     // ✅ Expose network state for UI
@@ -111,7 +112,7 @@ class MainViewModel @Inject constructor(
     val uiState: StateFlow<MainUiState> = combine(
         _uiState.trackChanges("BaseState"),
         sessionUnlockManager.unlockedItems.trackChanges("UnlockedIds"),
-        billingManager.isPurchased.trackChanges("IsPremium"),
+        _isPremium.trackChanges("IsPremium"),  // ✅ Use local premium state
         adManager.adState.trackChanges("AdState")  // ✅ Get ad state from manager
     ) { baseState, unlockedIds, isPremium, adState ->
         // ✅ Debug: Log state combination
@@ -133,15 +134,6 @@ class MainViewModel @Inject constructor(
             Log.d("MainViewModel", "⚠️ Base state is not Content: ${baseState::class.simpleName}")
             baseState
         }
-    }.onStart {
-        // ✅ SRP FIX: Delegate ad initialization to manager
-        adManager.initializeAds()
-        adManager.loadBannerAd(
-            adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
-            adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER,
-            placement = "main_screen"
-        )
-        fetchHomeData()
     }.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), MainUiState.Loading
     )
@@ -168,86 +160,65 @@ class MainViewModel @Inject constructor(
         null
     )
 
-    // ❌ REMOVED: Separate isPurchased StateFlow - now part of uiState
-    // This follows pure MVI pattern: single source of truth
-
-    // ✅ MVI FIX: Initialize ads based on combined state (wait for billing + content)
-    init {
+    /**
+     * ✅ Centralized premium status and ad management
+     * - Single collector for billingManager.isPurchased
+     * - Updates local _isPremium state for combine block
+     * - Manages ad lifecycle based on premium status
+     */
+    private fun managePremiumStatusAndAds() {
         viewModelScope.launch {
-            var adsInitialized = false  // ✅ FIX: Prevent infinite banner ad loading loop
-            var bannerAdLoaded = false  // ✅ Track if banner ad was ever successfully loaded
-            var rewardedAdPreloaded = false  // ✅ Separate flag for rewarded ad preload
+            var adsInitialized = false
+            var bannerAdLoaded = false
+            var rewardedAdPreloaded = false
 
-            uiState.collect { state ->
-                if (state is MainUiState.Content) {
-                    Log.d("MainViewModel", "💳 State updated - isPremium: ${state.isPremium}")
+            // ✅ Single place that collects from billingManager
+            billingManager.isPurchased.collect { isPremium ->
+                Log.d("MainViewModel", "💳 Premium status: $isPremium")
 
-                    if (!state.isPremium) {
-                        // ✅ Initialize AdMob SDK once
-                        if (!adsInitialized) {
-                            Log.d("MainViewModel", "📢 Free user - Initializing ads")
-                            initializeAds()
-                            adsInitialized = true
-                        }
+                // ✅ Update local state (used by combine block)
+                _isPremium.value = isPremium
 
-                        // ✅ Track when banner ad loads successfully
-                        val bannerAd = state.adState.bannerAd
-                        if (bannerAd?.isLoaded == true && !bannerAdLoaded) {
-                            bannerAdLoaded = true
-                            Log.d(
-                                "MainViewModel",
-                                "✅ Banner ad loaded successfully - marking as loaded"
-                            )
-                        }
-
-                        // ✅ ONLY reload if: never loaded before AND (missing OR failed)
-                        // This prevents reload loops and vanishing ads during navigation
-                        if (!bannerAdLoaded && adsInitialized && internetConnectionManager.isCurrentlyConnected()) {
-                            if (bannerAd == null || (!bannerAd.isLoaded && !bannerAd.isLoading)) {
-                                Log.d(
-                                    "MainViewModel",
-                                    "🔄 Banner ad not yet loaded - Attempting load"
-                                )
-                                loadBannerAd(
-                                    adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
-                                    adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER
-                                )
-                            }
-                        }
-
-                        // ✅ FIXED: Preload rewarded ad once (separate flag)
-                        if (!rewardedAdPreloaded && adsInitialized) {
-                            if (internetConnectionManager.isCurrentlyConnected()) {
-                                Log.d("MainViewModel", "🎁 Preloading rewarded ad")
-                                loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)
-                                rewardedAdPreloaded = true
-                            }
-                        }
-                    } else {
-                        Log.d("MainViewModel", "🏆 Premium user - Skipping all ad initialization")
-                        adsInitialized = true  // ✅ Mark as initialized even for premium
-                        bannerAdLoaded = true  // ✅ Skip banner ad for premium
-                        rewardedAdPreloaded = true  // ✅ Skip rewarded ad for premium
+                if (!isPremium) {
+                    // Free user - initialize and load ads
+                    if (!adsInitialized) {
+                        Log.d("MainViewModel", "📢 Initializing ads for free user")
+                        initializeAds()
+                        adsInitialized = true
                     }
+
+                    // Load banner ad once
+                    if (!bannerAdLoaded && internetConnectionManager.isCurrentlyConnected()) {
+                        Log.d("MainViewModel", "📢 Loading banner ad")
+                        loadBannerAd(
+                            adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
+                            adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER
+                        )
+                        bannerAdLoaded = true
+                    }
+
+                    // Preload rewarded ad once
+                    if (!rewardedAdPreloaded && internetConnectionManager.isCurrentlyConnected()) {
+                        Log.d("MainViewModel", "🎁 Preloading rewarded ad")
+                        loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)
+                        rewardedAdPreloaded = true
+                    }
+                } else {
+                    Log.d("MainViewModel", "🏆 Premium user - No ads needed")
+                    // Mark as initialized to prevent future ad loading
+                    adsInitialized = true
+                    bannerAdLoaded = true
+                    rewardedAdPreloaded = true
                 }
             }
         }
     }
-
 
     fun <T> Flow<T>.trackChanges(name: String): Flow<T> =
         this.distinctUntilChanged()
             .onEach { value ->
                 Log.d("MainViewModel uiState", "🔄 State combine $name changed to")
             }
-
-    fun seeIfPremium() {
-        /* isPremium = billingManager.isPremium.stateIn(
-         viewModelScope,
-         SharingStarted.WhileSubscribed(5000),
-         false  // Default to non-premium until billing initializes
-         )*/
-    }
 
     val currentlyPlayingStoryId: StateFlow<String?> = combine(
         musicController.currentAudioItem,
@@ -331,6 +302,7 @@ class MainViewModel @Inject constructor(
 
         // ✅ Analytics: Track download started
         val downloadStartTime = System.currentTimeMillis()
+
         analyticsHelper.logDownloadStarted(
             contentType = "lullaby",
             contentId = lullabyItem.documentId,

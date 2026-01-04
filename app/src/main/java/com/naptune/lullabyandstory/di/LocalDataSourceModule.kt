@@ -23,7 +23,6 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 abstract class LocalDataSourceModule {
 
-
     @Binds
     abstract fun bindLullabyLocalDataSource(dataSourceImpl: LullabyLocalDataSourceImpl): LullabyLocalDataSource
 

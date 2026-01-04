@@ -25,6 +25,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.zIndex
@@ -42,6 +43,7 @@ import com.naptune.lullabyandstory.presentation.components.admob.SmoothBannerAdS
 import com.naptune.lullabyandstory.presentation.components.common.responsive.rememberScreenDimensionManager
 import com.naptune.lullabyandstory.presentation.components.RewardVideoBottomSheet
 import com.naptune.lullabyandstory.R
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,9 +61,18 @@ fun MainScreen(
     // ✅ NEW: Dynamic content padding based on mini controller
     contentBottomPadding: Dp = 0.dp
 ) {
+
     val systemUiController = rememberSystemUiController()
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     val isNetworkAvailable by viewModel.isNetworkAvailable.collectAsStateWithLifecycle()
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+/*    val uiState by remember(viewModel){ viewModel.uiState.onStart {   Log.d(
+        "Testing State in up",
+        "🏠 MainScreen recomposed - UI state updated at ${System.currentTimeMillis()}"
+    )}}.collectAsStateWithLifecycle(
+        MainUiState.Loading)*/
 
     // ✅ NEW: Reward Video Bottom Sheet state
     var showWatchAdSheet by remember { mutableStateOf(false) }

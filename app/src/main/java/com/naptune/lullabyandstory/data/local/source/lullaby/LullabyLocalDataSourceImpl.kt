@@ -18,7 +18,6 @@ import javax.inject.Singleton
  *
  * @param lullabyDao DAO for lullaby database operations
  */
-@Singleton
 class LullabyLocalDataSourceImpl @Inject constructor(
     private val lullabyDao: LullabyDao
 ) : LullabyLocalDataSource {

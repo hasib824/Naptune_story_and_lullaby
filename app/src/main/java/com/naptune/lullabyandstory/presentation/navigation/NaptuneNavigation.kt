@@ -456,7 +456,7 @@ fun NaptuneNavigation(
                 composable(
                     Screen.StoryManager.route, arguments = listOf(
                         navArgument("storyJson") { type = NavType.StringType },
-                      /*  navArgument("storyName") { type = NavType.StringType },
+                       /* navArgument("storyName") { type = NavType.StringType },
                         navArgument("storyDescription") { type = NavType.StringType },
                         navArgument("imagePath") { type = NavType.StringType },
                         navArgument("documentId") { type = NavType.StringType },
@@ -471,26 +471,26 @@ fun NaptuneNavigation(
                     val imagePath = backStackEntry.arguments?.getString("imagePath") ?: ""
                     val documentId = backStackEntry.arguments?.getString("documentId") ?: ""
                     val storyAudioPath = backStackEntry.arguments?.getString("storyAudioPath") ?: ""
-                    val storyLength = backStackEntry.arguments?.getString("storyLength") ?: ""*/
+                    val storyLength = backStackEntry.arguments?.getString("storyLength") ?: ""
+
+
+                     val currentStory = StoryDomainModel(
+                     id = java.net.URLDecoder.decode(storyId, "UTF-8"),
+                     storyName = java.net.URLDecoder.decode(storyName, "UTF-8"),
+                     storyDescription = java.net.URLDecoder.decode(storyDescription, "UTF-8"),
+                     imagePath = java.net.URLDecoder.decode(imagePath, "UTF-8"),
+                     storyAudioPath = java.net.URLDecoder.decode(storyAudioPath, "UTF-8"),
+                     documentId = java.net.URLDecoder.decode(documentId, "UTF-8"),
+                     story_reading_time = java.net.URLDecoder.decode(storyLength, "UTF-8"),
+                     )*/
+
+                    val currentStory = backStackEntry.arguments?.getString("storyJson")?.let { json ->
+                       Gson().fromJson(json, StoryDomainModel::class.java)
+                    }
 
                     SetStatusBarColor(
                         color = Color.Transparent,
                     )
-                   /* val currentStory = StoryDomainModel(
-                        id = java.net.URLDecoder.decode(storyId, "UTF-8"),
-                        storyName = java.net.URLDecoder.decode(storyName, "UTF-8"),
-                        storyDescription = java.net.URLDecoder.decode(storyDescription, "UTF-8"),
-                        imagePath = java.net.URLDecoder.decode(imagePath, "UTF-8"),
-                        storyAudioPath = java.net.URLDecoder.decode(storyAudioPath, "UTF-8"),
-                        documentId = java.net.URLDecoder.decode(documentId, "UTF-8"),
-                        story_reading_time = java.net.URLDecoder.decode(storyLength, "UTF-8"),
-                    )*/
-
-                    val currentStory = backStackEntry.arguments?.getString("storyJson")?.let { json ->
-                        val currentStory = Gson().fromJson(json, StoryDomainModel::class.java)
-                        currentStory
-                    }
-
 
                     MainLayout(
                         navController = navController,
