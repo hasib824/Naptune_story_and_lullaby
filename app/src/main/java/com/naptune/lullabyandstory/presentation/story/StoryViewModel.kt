@@ -21,8 +21,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 
 
@@ -60,6 +58,35 @@ class StoryViewModel @Inject constructor(
     init {
         // ✅ Track screen view
         trackScreenView()
+
+        manageAdsLoading()
+    }
+
+    private fun manageAdsLoading() {
+        viewModelScope.launch {
+            var adsInitialized = false  // ✅ FIX: Prevent infinite ad loading loop
+            billingManager.isPurchased.collect { isPurchased ->
+
+
+                    if (!isPurchased) {
+                        // ✅ Initialize AdMob SDK once
+                        if (!adsInitialized) {
+                            Log.d("StoryViewModel", "📢 Free user - Initializing ads")
+                            initializeAds()
+                            // Start monitoring network for ad loading
+                            monitorNetworkForAdLoading()
+                            adsInitialized = true  // ✅ Mark as initialized
+                        }
+
+                        // ✅ Reload banner ad if missing (handles back navigation)
+
+                    } else {
+                        Log.d("StoryViewModel", "🏆 Premium user - Skipping all ad initialization")
+                        adsInitialized = true  // ✅ Mark as initialized even for premium
+                    }
+
+            }
+        }
     }
 
     /**
@@ -97,16 +124,6 @@ class StoryViewModel @Inject constructor(
         }
     }.onStart {
         // ✅ SRP FIX: Delegate ad initialization to manager
-        adManager.initializeAds()
-        adManager.loadBannerAd(
-            adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
-            adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER,
-            placement = "story_screen"
-        )
-
-        // Preload rewarded ad for story unlock
-        adManager.loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)
-
         fetchStories()
 
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StoryUiState.IsLoading)
@@ -137,45 +154,6 @@ class StoryViewModel @Inject constructor(
 
     // ❌ REMOVED: Separate isPremium StateFlow - now part of uiState
     // This follows pure MVI pattern: single source of truth
-
-    init {
-        Log.d("StoryViewModel", "🚀 ViewModel initialized")
-
-        // ✅ MVI FIX: Initialize ads based on combined state (wait for billing + content)
-        viewModelScope.launch {
-            var adsInitialized = false  // ✅ FIX: Prevent infinite ad loading loop
-            uiState.collect { state ->
-                if (state is StoryUiState.Content) {
-                    Log.d("StoryViewModel", "💳 State updated - isPremium: ${state.isPremium}")
-
-                    if (!state.isPremium) {
-                        // ✅ Initialize AdMob SDK once
-                        if (!adsInitialized) {
-                            Log.d("StoryViewModel", "📢 Free user - Initializing ads")
-                            initializeAds()
-                            // Start monitoring network for ad loading
-                            monitorNetworkForAdLoading()
-                            adsInitialized = true  // ✅ Mark as initialized
-                        }
-
-                        // ✅ Reload banner ad if missing (handles back navigation)
-                        val bannerAd = state.adState.bannerAd
-                        if (internetConnectionManager.isCurrentlyConnected() &&
-                            (bannerAd == null || (!bannerAd.isLoaded && !bannerAd.isLoading))) {
-                            Log.d("StoryViewModel", "🔄 Banner ad missing - Reloading")
-                            loadBannerAd(
-                                adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
-                                adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER
-                            )
-                        }
-                    } else {
-                        Log.d("StoryViewModel", "🏆 Premium user - Skipping all ad initialization")
-                        adsInitialized = true  // ✅ Mark as initialized even for premium
-                    }
-                }
-            }
-        }
-    }
 
     fun onhandleIntent(storyIntent: StoryIntent) {
         Log.d("StoryViewModel", "🎯 Intent received: $storyIntent")
@@ -345,29 +323,23 @@ class StoryViewModel @Inject constructor(
      */
     private fun handleBannerAdNetworkState(isConnected: Boolean) {
         Log.d("StoryViewModel", "📢 Handling banner ad network state: $isConnected")
-        
-        val currentState = _uiState.value as? StoryUiState.Content
-        if (currentState != null) {
+
             if (isConnected) {
                 // ✅ Network available - check if ad needs to be loaded
-                val bannerAd = currentState.adState.bannerAd
-                if (bannerAd == null || (!bannerAd.isLoaded && !bannerAd.isLoading)) {
+
                     Log.d("StoryViewModel", "🚀 Network available - Starting banner ad load")
                     loadBannerAd(
                         adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
                         adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER
                     )
-                } else {
-                    Log.d("StoryViewModel", "✅ Banner ad already loaded or loading")
-                }
+                    adManager.loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)
+
             } else {
                 // ✅ Network not available - clear ad state
                 Log.d("StoryViewModel", "❌ Network not available - Clearing banner ad state")
-                _uiState.value = currentState.copy(
-                    adState = currentState.adState.copy(bannerAd = null)
-                )
+
             }
-        }
+
     }
 
     override fun onCleared() {

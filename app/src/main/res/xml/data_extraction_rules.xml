@@ -7,10 +7,10 @@
     <cloud-backup>
         <!-- ✅ Exclude DataStore containing first launch and splash screen flags from cloud backups -->
         <!-- This ensures proper first-time experience after uninstall/reinstall -->
-        <exclude domain="files" path="datastore/app_preferences.preferences_pb"/>
+        <exclude domain="file" path="datastore/app_preferences.preferences_pb"/>
     </cloud-backup>
     <device-transfer>
         <!-- ✅ Also exclude from device-to-device transfers -->
-        <exclude domain="files" path="datastore/app_preferences.preferences_pb"/>
+        <exclude domain="file" path="datastore/app_preferences.preferences_pb"/>
     </device-transfer>
 </data-extraction-rules>

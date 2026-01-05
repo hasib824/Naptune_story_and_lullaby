@@ -60,9 +60,34 @@ class LullabyViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _lullabyUiState = MutableStateFlow<LullabyUiState>(LullabyUiState.IsLoading)
+    private val _isPurchased =  MutableStateFlow<Boolean>(false)
+
 
     init {
         trackScreenView()
+        manageAdLoading()
+        fetchLullabyData()
+    }
+
+    private fun manageAdLoading() {
+        viewModelScope.launch {
+
+            var adsInitialized = false
+
+            billingManager.isPurchased.collect { isPurchased ->
+                _isPurchased.value = isPurchased
+
+                if (!isPurchased && !adsInitialized) {
+                    Log.d("LullabyViewModel", "📢 Free user - Initializing ads via manager")
+                    adManager.initializeAds()
+                    monitorNetworkAndLoadAdd()
+                    adsInitialized = true
+                } else if(isPurchased){
+                    Log.d("LullabyViewModel", "🏆 Premium user - Skipping all ad initialization")
+                    adsInitialized = true
+                }
+            }
+        }
     }
 
     /**
@@ -98,15 +123,15 @@ class LullabyViewModel @Inject constructor(
         }
     }.onStart {
         // ✅ SRP FIX: Delegate ad initialization to manager
-        adManager.initializeAds()
+        /*adManager.initializeAds()
         adManager.loadBannerAd(
             adUnitId = AdMobDataSource.TEST_BANNER_AD_UNIT_ID,
             adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER,
             placement = "lullaby_screen"
         )
-        adManager.loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)
+        adManager.loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)*/
 
-        fetchLullabyData()
+
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LullabyUiState.IsLoading)
 
     // Expose network state for UI
@@ -133,7 +158,7 @@ class LullabyViewModel @Inject constructor(
         initialValue = null
     )
 
-    init {
+    /*init {
         Log.d("LullabyViewModel", "🚀 ViewModel initialized")
 
         // Monitor network for ad loading via manager
@@ -155,7 +180,7 @@ class LullabyViewModel @Inject constructor(
                 }
             }
         }
-    }
+    }*/
 
     fun handleIntent(lullabyIntent: LullabyIntent) {
         when (lullabyIntent) {
@@ -373,7 +398,7 @@ class LullabyViewModel @Inject constructor(
      * Monitor network changes and automatically handle banner ad loading
      * ✅ SRP FIX: Simplified - manager handles the details
      */
-    private fun monitorNetworkForAdLoading() {
+    private fun monitorNetworkAndLoadAdd() {
         viewModelScope.launch {
             internetConnectionManager.isNetworkAvailable.collect { isConnected ->
                 Log.d("LullabyViewModel", "🌐 Network state changed: $isConnected")
@@ -385,6 +410,8 @@ class LullabyViewModel @Inject constructor(
                         adSizeType = AdSizeType.ANCHORED_ADAPTIVE_BANNER,
                         placement = "lullaby_screen"
                     )
+
+                    adManager.loadRewardedAd(AdMobDataSource.TEST_REWARDED_AD_UNIT_ID)
                 }
             }
         }
